@@ -6,14 +6,9 @@ const API_URL =
   "http://localhost:3001/api";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${API_URL}/:path*`,
-      },
-    ];
-  },
+  output: 'export',
+  images: { unoptimized: true },
+  // rewrites not supported with static export; API calls run client-side
 };
 
 export default nextConfig;
