@@ -1,0 +1,45 @@
+{
+  "name": "去中心化社交平台",
+  "short_name": "DeSocial",
+  "description": "基于区块链技术的去中心化社交网络",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0070f3",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48 72x72 96x96 128x128 256x256 512x512",
+      "type": "image/x-icon",
+      "purpose": "any"
+    },
+    {
+      "src": "/next.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "orientation": "portrait",
+  "categories": ["social", "communication", "entertainment"],
+  "shortcuts": [
+    {
+      "name": "发布动态",
+      "short_name": "发布",
+      "description": "发布新动态",
+      "url": "/?action=create",
+      "icons": [{ "src": "/next.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "消息",
+      "short_name": "消息",
+      "description": "查看消息",
+      "url": "/messages",
+      "icons": [{ "src": "/next.svg", "sizes": "192x192" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "lang": "zh-CN",
+  "dir": "ltr"
+}

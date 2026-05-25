@@ -1,0 +1,10 @@
+.next/
+node_modules/
+dist/
+build/
+*.log
+*.tsbuildinfo
+coverage/
+.env*
+!.env.example
+public/
