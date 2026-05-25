@@ -39,6 +39,9 @@ const DEFAULT_TIMEOUT = 30000;
 // GET 请求去重：相同 URL 的并发请求共享同一个 Promise
 const inflightRequests = new Map<string, Promise<unknown>>();
 
+// Token 刷新去重：并发 401 只触发一次刷新
+let refreshPromise: Promise<boolean> | null = null;
+
 function buildUrl(endpoint: string): string {
   return `${API_BASE}${endpoint}`;
 }
@@ -47,6 +50,53 @@ function getAuthHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
   const token = localStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function clearAuthState(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('token');
+  localStorage.removeItem('userId');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('adminSession');
+  document.cookie = 'token=; path=/; max-age=0';
+  document.cookie = 'isAdmin=; path=/; max-age=0';
+}
+
+async function refreshAccessToken(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) return false;
+
+  try {
+    const response = await fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) return false;
+
+    const data = await response.json();
+    localStorage.setItem('token', data.accessToken);
+    document.cookie = `token=${data.accessToken}; path=/; max-age=604800; SameSite=Lax`;
+    if (data.refreshToken) {
+      localStorage.setItem('refreshToken', data.refreshToken);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function tryRefreshToken(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = refreshAccessToken().finally(() => {
+    refreshPromise = null;
+  });
+
+  return refreshPromise;
 }
 
 async function request<T>(
@@ -76,7 +126,8 @@ async function request<T>(
 
 async function doRequest<T>(
   url: string,
-  options: RequestInit
+  options: RequestInit,
+  isRetryAfterRefresh = false
 ): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
@@ -97,6 +148,18 @@ async function doRequest<T>(
     try {
       const response = await fetch(url, config);
       clearTimeout(timeoutId);
+
+      if (response.status === 401 && !isRetryAfterRefresh) {
+        const refreshed = await tryRefreshToken();
+        if (refreshed) {
+          return doRequest<T>(url, options, true);
+        }
+        clearAuthState();
+        if (typeof window !== 'undefined') {
+          window.location.href = '/auth/sign-in';
+        }
+        throw new ApiError('登录已过期，请重新登录', 401);
+      }
 
       if (!response.ok) {
         const errorBody = await response.json().catch(() => ({}));

@@ -10,6 +10,7 @@ import Avatar from '@/components/ui/Avatar';
 import { useAuth } from '@/lib/auth';
 import { getIPFSUrl } from '@/lib/ipfs';
 import UserDisplay from '@/components/common/UserDisplay';
+import { toast } from '@/lib/toast';
 
 
 interface User {
@@ -65,14 +66,14 @@ export default function UserManagementPage() {
       });
       if (response.ok) {
         fetchUsers();
-        alert('用户已冻结');
+        toast.success('用户已冻结');
       } else {
         const error = await response.json();
-        alert(error.message || '操作失败');
+        toast.error(error.message || '操作失败');
       }
     } catch (error) {
       console.error('冻结用户失败:', error);
-      alert('操作失败');
+      toast.error('操作失败');
     }
   };
 
@@ -87,14 +88,14 @@ export default function UserManagementPage() {
       });
       if (response.ok) {
         fetchUsers();
-        alert('用户已解冻');
+        toast.success('用户已解冻');
       } else {
         const error = await response.json();
-        alert(error.message || '操作失败');
+        toast.error(error.message || '操作失败');
       }
     } catch (error) {
       console.error('解冻用户失败:', error);
-      alert('操作失败');
+      toast.error('操作失败');
     }
   };
 

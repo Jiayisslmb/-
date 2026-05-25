@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LinkWithBack from '@/components/common/LinkWithBack';
 import { useAuth } from '@/lib/auth';
@@ -13,12 +13,14 @@ import ContentFeed from '@/components/content/ContentFeed';
 import BackButton from '@/components/common/BackButton';
 import { getCircle, joinCircle, leaveCircle } from '@/lib/api';
 import { getIPFSUrl } from '@/lib/ipfs';
+import { toast } from '@/lib/toast';
 
 
 export default function CircleDetailPage() {
   const params = useParams();
   const circleId = params.id as string;
   const { isAuthenticated, user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
 
   const [circle, setCircle] = useState<any>({
     id: circleId,
@@ -118,7 +120,7 @@ export default function CircleDetailPage() {
     return (
       <div className="text-center py-12">
         <p className="text-red-600 mb-4">{error}</p>
-        <Button variant="primary" onClick={() => window.location.reload()}>重新加载</Button>
+        <Button variant="primary" onClick={() => router.refresh()}>重新加载</Button>
       </div>
     );
   }
@@ -129,7 +131,7 @@ export default function CircleDetailPage() {
       if (joined) {
         // 检查是否是创建者
         if (isCreator) {
-          alert('创建者不能离开圈子，请先删除圈子');
+          toast.warning('创建者不能离开圈子，请先删除圈子');
           return;
         }
         await leaveCircle(circleId);
@@ -150,9 +152,9 @@ export default function CircleDetailPage() {
       console.error('操作失败:', err);
       // 处理创建者不能离开圈子的错误
       if (err.message?.includes('创建者') || err.message?.includes('creator')) {
-        alert('创建者不能离开圈子，请先删除圈子');
+        toast.warning('创建者不能离开圈子，请先删除圈子');
       } else {
-        alert(err.message || '操作失败，请重试');
+        toast.error(err.message || '操作失败，请重试');
       }
     }
   };

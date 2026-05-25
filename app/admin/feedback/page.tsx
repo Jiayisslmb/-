@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Avatar from '@/components/ui/Avatar';
 import { getIPFSUrl } from '@/lib/ipfs';
+import { toast } from '@/lib/toast';
 
 
 interface Report {
@@ -69,14 +70,14 @@ export default function FeedbackPage() {
       });
       if (response.ok) {
         fetchReports();
-        alert('状态已更新');
+        toast.success('状态已更新');
       } else {
         const error = await response.json();
-        alert(error.message || '更新失败');
+        toast.error(error.message || '更新失败');
       }
     } catch (error) {
       console.error('更新状态失败:', error);
-      alert('更新失败');
+      toast.error('更新失败');
     }
   };
 

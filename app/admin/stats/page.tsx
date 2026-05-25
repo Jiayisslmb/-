@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Card from '@/components/ui/Card';
 
 
@@ -115,6 +116,7 @@ export default function StatsPage() {
   const [interactionStats, setInteractionStats] = useState<InteractionStat | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchStatistics = async () => {
@@ -192,7 +194,7 @@ export default function StatsPage() {
         <p className="text-red-600 mb-4">{error}</p>
         <button
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-          onClick={() => window.location.reload()}
+          onClick={() => router.refresh()}
         >重新加载</button>
       </div>
     );

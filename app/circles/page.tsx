@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/lib/auth';
 import { getIPFSUrl } from '@/lib/ipfs';
+import { toast } from '@/lib/toast';
 
 
 interface Circle {
@@ -74,7 +75,7 @@ export default function CirclesPage() {
 
   const handleJoin = async (circleId: number) => {
     if (!isAuthenticated) {
-      alert('请先登录');
+      toast.info('请先登录');
       return;
     }
 
@@ -90,14 +91,14 @@ export default function CirclesPage() {
       if (response.ok) {
         setJoinedCircles([...joinedCircles, circleId]);
         fetchCircles();
-        alert('加入成功！');
+        toast.success('加入成功！');
       } else {
         const error = await response.json();
-        alert(error.message || '加入失败');
+        toast.error(error.message || '加入失败');
       }
     } catch (error) {
       console.error('加入圈子失败:', error);
-      alert('加入失败');
+      toast.error('加入失败');
     }
   };
 
@@ -114,14 +115,14 @@ export default function CirclesPage() {
       if (response.ok) {
         setJoinedCircles(joinedCircles.filter(id => id !== circleId));
         fetchCircles();
-        alert('已退出圈子');
+        toast.success('已退出圈子');
       } else {
         const error = await response.json();
-        alert(error.message || '退出失败');
+        toast.error(error.message || '退出失败');
       }
     } catch (error) {
       console.error('退出圈子失败:', error);
-      alert('退出失败');
+      toast.error('退出失败');
     }
   };
 

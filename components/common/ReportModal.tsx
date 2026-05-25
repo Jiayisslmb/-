@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import { toast } from '@/lib/toast';
 
 
 interface ReportModalProps {
@@ -49,7 +50,7 @@ export default function ReportModal({
 
   const handleSubmit = async () => {
     if (!reason) {
-      alert('请选择举报原因');
+      toast.warning('请选择举报原因');
       return;
     }
 
@@ -95,11 +96,11 @@ export default function ReportModal({
         }, 1500);
       } else {
         const error = await response.json();
-        alert(error.message || '举报失败');
+        toast.error(error.message || '举报失败');
       }
     } catch (error) {
       console.error('举报失败:', error);
-      alert('举报失败，请重试');
+      toast.error('举报失败，请重试');
     } finally {
       setLoading(false);
     }

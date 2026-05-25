@@ -7,6 +7,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { useAuth } from '@/lib/auth';
+import { toast } from '@/lib/toast';
 
 
 interface Content {
@@ -92,14 +93,14 @@ export default function ContentManagementPage() {
       
       if (response.ok) {
         fetchContents();
-        alert('内容已删除');
+        toast.success('内容已删除');
       } else {
         const error = await response.json();
-        alert(error.message || '删除失败');
+        toast.error(error.message || '删除失败');
       }
     } catch (error) {
       console.error('删除内容失败:', error);
-      alert('删除失败');
+      toast.error('删除失败');
     }
   };
 
@@ -127,14 +128,14 @@ export default function ContentManagementPage() {
       
       if (response.ok) {
         fetchContents();
-        alert('内容已恢复');
+        toast.success('内容已恢复');
       } else {
         const error = await response.json();
-        alert(error.message || '恢复失败');
+        toast.error(error.message || '恢复失败');
       }
     } catch (error) {
       console.error('恢复内容失败:', error);
-      alert('恢复失败');
+      toast.error('恢复失败');
     }
   };
 

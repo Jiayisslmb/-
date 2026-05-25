@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Card from '@/components/ui/Card';
+import { toast } from '@/lib/toast';
 
 export default function CreateActivityPage() {
   const router = useRouter();
@@ -46,11 +47,11 @@ export default function CreateActivityPage() {
         router.push('/activities');
       } else {
         const error = await response.json().catch(() => ({}));
-        alert((error as any).message || '创建失败，请稍后重试');
+        toast.error((error as any).message || '创建失败，请稍后重试');
       }
     } catch (error) {
       console.error('创建失败:', error);
-      alert('网络错误，请检查后端服务是否启动');
+      toast.error('网络错误，请检查后端服务是否启动');
     } finally {
       setLoading(false);
     }

@@ -360,6 +360,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       localStorage.setItem('token', data.accessToken || data.token);
       localStorage.setItem('userId', data.user.id.toString());
+      document.cookie = `token=${data.accessToken || data.token}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = `isAdmin=${data.user.isAdmin ? 'true' : 'false'}; path=/; max-age=604800; SameSite=Lax`;
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken);
+      }
       if (data.sessionToken) {
         localStorage.setItem('adminSession', data.sessionToken);
       }
@@ -421,6 +426,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (loginResponse.ok) {
           const loginData = await loginResponse.json();
           localStorage.setItem('token', loginData.accessToken || loginData.token);
+          localStorage.setItem('userId', String(loginData.user?.id || ''));
+          document.cookie = `token=${loginData.accessToken || loginData.token}; path=/; max-age=604800; SameSite=Lax`;
+          document.cookie = `isAdmin=${loginData.user?.isAdmin ? 'true' : 'false'}; path=/; max-age=604800; SameSite=Lax`;
         }
       } catch (error) {
         console.error('注册失败:', error);
@@ -468,6 +476,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       localStorage.setItem('token', data.accessToken || data.token);
       localStorage.setItem('userId', data.user.id.toString());
+      document.cookie = `token=${data.accessToken || data.token}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = `isAdmin=true; path=/; max-age=604800; SameSite=Lax`;
       if (data.sessionToken) {
         localStorage.setItem('adminSession', data.sessionToken);
       }
@@ -485,7 +495,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('adminSession');
+    document.cookie = 'token=; path=/; max-age=0';
+    document.cookie = 'isAdmin=; path=/; max-age=0';
   }, []);
 
   // 更新个人资料

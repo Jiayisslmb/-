@@ -7,6 +7,7 @@ import Input from '@/components/ui/Input';
 import Avatar from '@/components/ui/Avatar';
 import { getIPFSUrl } from '@/lib/ipfs';
 import UserDisplay from '@/components/common/UserDisplay';
+import { toast } from '@/lib/toast';
 
 
 interface Circle {
@@ -71,14 +72,14 @@ export default function CirclesManagementPage() {
       });
       if (response.ok) {
         fetchCircles();
-        alert('圈子已删除');
+        toast.success('圈子已删除');
       } else {
         const error = await response.json();
-        alert(error.message || '删除失败');
+        toast.error(error.message || '删除失败');
       }
     } catch (error) {
       console.error('删除圈子失败:', error);
-      alert('删除失败');
+      toast.error('删除失败');
     }
   };
 

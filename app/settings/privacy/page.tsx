@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import SettingsLayout from '@/components/layout/SettingsLayout';
+import { toast } from '@/lib/toast';
 
 
 export default function PrivacySettingsPage() {
@@ -62,7 +63,7 @@ export default function PrivacySettingsPage() {
       setTimeout(() => setShowSuccessToast(false), 3000);
     } catch (error) {
       console.error('更新失败:', error);
-      alert('更新失败，请重试');
+      toast.error('更新失败，请重试');
     } finally {
       setLoading(false);
     }

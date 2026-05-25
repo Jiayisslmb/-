@@ -7,6 +7,7 @@ import { createMoment } from '@/lib/api';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/lib/auth';
 import Link from 'next/link';
+import { toast } from '@/lib/toast';
 
 
 interface Topic {
@@ -133,7 +134,7 @@ export default function MomentCreator() {
   const handleIpfsImport = () => {
     const cid = parseCidFromInput(mediaCidInput);
     if (!cid) {
-      alert('请输入有效的IPFS标识');
+      toast.warning('请输入有效的IPFS标识');
       return;
     }
     setMedia(null);

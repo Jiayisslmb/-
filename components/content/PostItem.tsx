@@ -69,6 +69,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import LinkWithBack from '@/components/common/LinkWithBack';
 import { formatDate, formatNumber } from '@/lib/utils';
 import Card from '@/components/ui/Card';
@@ -80,6 +81,7 @@ import ReportModal from '@/components/common/ReportModal';
 import { UserDisplayWithAvatar } from '@/components/common/UserDisplay';
 
 import type { PostDTO, Visibility, PostType } from '@/types';
+import { toast } from '@/lib/toast';
 export type { PostDTO as Post, Visibility, PostType } from '@/types';
 
 type Post = PostDTO;
@@ -136,6 +138,7 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
    * @constant {Object} user - 当前用户对象
    */
   const { isAuthenticated, user } = useAuth();
+  const router = useRouter();
 
   /**
    * 本地状态管理
@@ -228,7 +231,7 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
 
   const handleLike = async () => {
     if (!isAuthenticated) {
-      alert('请先登录');
+      toast.info('请先登录');
       return;
     }
 
@@ -255,7 +258,7 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
 
   const handleCollect = async () => {
     if (!isAuthenticated) {
-      alert('请先登录');
+      toast.info('请先登录');
       return;
     }
 
@@ -282,11 +285,11 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
 
   const handleShare = () => {
     if (!isAuthenticated) {
-      alert('请先登录');
+      toast.info('请先登录');
       return;
     }
     if (isRepostMoment) {
-      alert('转发动态不可再次转发');
+      toast.warning('转发动态不可再次转发');
       return;
     }
     setShowShareOptions(!showShareOptions);
@@ -294,12 +297,12 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
 
   const handleShareToMoment = () => {
     if (!isAuthenticated) {
-      alert('请先登录');
+      toast.info('请先登录');
       return;
     }
     setShowShareOptions(false);
     const postUrl = `/content/create/moment?repost=${isArticle ? 'article' : 'moment'}_${post.id}`;
-    window.location.href = postUrl;
+    router.push(postUrl);
   };
 
   const handleShareToFriend = async () => {
@@ -366,19 +369,19 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
       setShowShareOptions(false);
       
       if (copySuccess) {
-        alert('链接已复制到剪贴板');
+        toast.success('链接已复制到剪贴板');
       } else {
-        alert('链接复制失败，但转发计数已更新');
+        toast.warning('链接复制失败，但转发计数已更新');
       }
     } catch (err) {
       console.error('转发操作失败:', err);
-      alert('转发失败，请重试');
+      toast.error('转发失败，请重试');
     }
   };
 
   const handleChangeVisibility = async (newVisibility: Visibility) => {
     if (!isAuthenticated) {
-      alert('请先登录');
+      toast.info('请先登录');
       return;
     }
 
@@ -395,11 +398,11 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
 
       if (response.ok) {
         setShowVisibilityMenu(false);
-        window.location.reload();
+        router.refresh();
       }
     } catch (err) {
       console.error('修改可见性失败:', err);
-      alert('修改可见性失败，请重试');
+      toast.error('修改可见性失败，请重试');
     }
   };
 
@@ -500,14 +503,14 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
                             if (response.ok) {
                               onDelete?.(post.id);
                               setShowMenu(false);
-                              window.location.reload();
+                              router.refresh();
                             } else {
                               const error = await response.json();
-                              alert(error.message || '删除失败');
+                              toast.error(error.message || '删除失败');
                             }
                           } catch (err) {
                             console.error('删除失败:', err);
-                            alert('删除失败，请重试');
+                            toast.error('删除失败，请重试');
                           }
                         }}
                         className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600"

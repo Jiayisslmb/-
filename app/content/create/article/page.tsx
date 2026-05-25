@@ -9,6 +9,7 @@ import { uploadToIPFS, getIPFSUrl } from '@/lib/ipfs';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import BackButton from '@/components/common/BackButton';
+import { toast } from '@/lib/toast';
 
 
 interface Circle {
@@ -116,7 +117,7 @@ export default function CreateArticlePage() {
   const handleIpfsImport = () => {
     const cid = parseCidFromInput(coverCidInput);
     if (!cid) {
-      alert('请输入有效的IPFS标识');
+      toast.warning('请输入有效的IPFS标识');
       return;
     }
     setCoverImage(null);
@@ -151,7 +152,7 @@ export default function CreateArticlePage() {
     e.preventDefault();
     
     if (!formData.circleId) {
-      alert('请选择要关联的圈子');
+      toast.warning('请选择要关联的圈子');
       return;
     }
     
@@ -180,7 +181,7 @@ export default function CreateArticlePage() {
       router.refresh();
     } catch (error) {
       console.error('发布失败:', error);
-      alert('发布失败，请稍后再试');
+      toast.error('发布失败，请稍后再试');
     } finally {
       setLoading(false);
     }

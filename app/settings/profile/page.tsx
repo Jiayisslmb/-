@@ -10,6 +10,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import SettingsLayout from '@/components/layout/SettingsLayout';
+import { toast } from '@/lib/toast';
 
 
 export default function ProfileSettingsPage() {
@@ -78,7 +79,7 @@ export default function ProfileSettingsPage() {
         setAvatarPreview(result.url);
       } catch (error) {
         console.error('头像上传失败:', error);
-        alert('头像上传失败，请重试');
+        toast.error('头像上传失败，请重试');
       }
     }
   };
@@ -102,7 +103,7 @@ export default function ProfileSettingsPage() {
         setBackgroundPreview(result.url);
       } catch (error) {
         console.error('封面图片上传失败:', error);
-        alert('封面图片上传失败，请重试');
+        toast.error('封面图片上传失败，请重试');
       }
     }
   };
@@ -144,7 +145,7 @@ export default function ProfileSettingsPage() {
       }, 1500);
     } catch (error) {
       console.error('更新失败:', error);
-      alert('更新失败，请重试');
+      toast.error('更新失败，请重试');
     } finally {
       setLoading(false);
     }

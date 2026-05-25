@@ -12,6 +12,7 @@ import Button from '@/components/ui/Button';
 import Link from 'next/link';
 import BackButton from '@/components/common/BackButton';
 import OnlineStatusIndicator from '@/components/common/OnlineStatusIndicator';
+import { toast } from '@/lib/toast';
 
 
 interface Conversation {
@@ -265,7 +266,7 @@ export default function MessagesPage() {
     const postKey = `${notification.articleId ? 'article' : 'moment'}-${postId}`;
 
     if (deletedPostIds.has(postKey)) {
-      alert('该文章/动态已被删除');
+      toast.warning('该文章/动态已被删除');
       return;
     }
 
@@ -273,7 +274,7 @@ export default function MessagesPage() {
       const exists = await checkPostExists(notification.articleId, notification.momentId);
       if (!exists) {
         setDeletedPostIds(prev => new Set(prev).add(postKey));
-        alert('该文章/动态已被删除');
+        toast.warning('该文章/动态已被删除');
         return;
       }
       router.push(`/content/${postId}`);
@@ -585,7 +586,7 @@ export default function MessagesPage() {
                           onClick={() => {
                             if (!deleteMode) {
                               if (isPostDeleted) {
-                                alert('该文章/动态已被删除');
+                                toast.warning('该文章/动态已被删除');
                                 return;
                               }
                               handleNotificationClick(like, 'like');
@@ -676,7 +677,7 @@ export default function MessagesPage() {
                           onClick={() => {
                             if (!deleteMode) {
                               if (isPostDeleted) {
-                                alert('该文章/动态已被删除');
+                                toast.warning('该文章/动态已被删除');
                                 return;
                               }
                               handleNotificationClick(reply, 'comment');

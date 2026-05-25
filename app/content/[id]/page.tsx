@@ -11,6 +11,7 @@ import LinkWithBack from '@/components/common/LinkWithBack';
 import BackButton from '@/components/common/BackButton';
 import { formatDate, formatNumber } from '@/lib/utils';
 import { getIPFSUrl } from '@/lib/ipfs';
+import { toast } from '@/lib/toast';
 
 type PostType = 'article' | 'moment';
 type Visibility = 'public' | 'followers';
@@ -209,7 +210,7 @@ export default function ContentDetailPage() {
   const getBasePath = () => post?.type === 'article' ? '/content/articles' : '/content/moments';
 
   const handleLike = async () => {
-    if (!isAuthenticated) { alert('请先登录'); return; }
+    if (!isAuthenticated) { toast.info('请先登录'); return; }
     try {
       const method = isLiked ? 'DELETE' : 'POST';
       const response = await fetch(`/api${getBasePath()}/${postId}/like`, {
@@ -223,7 +224,7 @@ export default function ContentDetailPage() {
   };
 
   const handleCollect = async () => {
-    if (!isAuthenticated) { alert('请先登录'); return; }
+    if (!isAuthenticated) { toast.info('请先登录'); return; }
     try {
       const method = isCollected ? 'DELETE' : 'POST';
       const response = await fetch(`/api${getBasePath()}/${postId}/collect`, {
@@ -234,7 +235,7 @@ export default function ContentDetailPage() {
   };
 
   const handleShare = async () => {
-    if (!isAuthenticated) { alert('请先登录'); return; }
+    if (!isAuthenticated) { toast.info('请先登录'); return; }
     try {
       const basePath = post?.type === 'article' ? '/content/articles' : '/content/moments';
       // 使用 count_only 模式，只更新计数器，不创建新动态
@@ -246,13 +247,13 @@ export default function ContentDetailPage() {
         if (post) setPost({ ...post, shares: data.reposts });
       } else {
         const errorData = await response.json().catch(() => ({}));
-        alert(errorData.message || '转发失败');
+        toast.error(errorData.message || '转发失败');
       }
-    } catch (err) { console.error('转发操作失败:', err); alert('转发失败，请重试'); }
+    } catch (err) { console.error('转发操作失败:', err); toast.error('转发失败，请重试'); }
   };
 
   const handleCommentSubmit = async () => {
-    if (!isAuthenticated) { alert('请先登录'); return; }
+    if (!isAuthenticated) { toast.info('请先登录'); return; }
     if (!newComment.trim()) return;
     try {
       setSubmittingComment(true);
@@ -277,7 +278,7 @@ export default function ContentDetailPage() {
   };
 
   const handleReplySubmit = async (parentId: number, parentType: 'comment' | 'reply' = 'comment') => {
-    if (!isAuthenticated) { alert('请先登录'); return; }
+    if (!isAuthenticated) { toast.info('请先登录'); return; }
     if (!replyContent.trim()) return;
     try {
       const response = await fetch(`/api${getBasePath()}/${postId}/comments`, {

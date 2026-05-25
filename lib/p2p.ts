@@ -1,4 +1,5 @@
-// @ts-nocheck
+// @ts-nocheck — libp2p types are incompatible with strict TypeScript
+// (Uint8Array<ArrayBufferLike> vs BufferSource, Uint8ArrayList, it-pipe generics)
 import {
   createLibp2p,
   Libp2p
@@ -9,6 +10,7 @@ import { kadDHT } from '@libp2p/kad-dht';
 import { identify } from '@libp2p/identify';
 import { ping } from '@libp2p/ping';
 import { pipe } from 'it-pipe';
+import type { Stream, Connection } from '@libp2p/interface';
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string';
 import { toString as uint8ArrayToString } from 'uint8arrays/to-string';
 
@@ -87,6 +89,11 @@ const DEFAULT_CONFIG: P2PConfig = {
   retryDelay: 1000,
 };
 
+interface DHTService {
+  put(key: Uint8Array, value: Uint8Array): Promise<void>;
+  get(key: Uint8Array): Promise<Uint8Array | null>;
+}
+
 export class P2PManager {
   private static instance: P2PManager;
   private libp2p: Libp2p | null = null;
@@ -123,7 +130,8 @@ export class P2PManager {
 
       const isBrowser = typeof window !== 'undefined';
 
-      const services: any = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const services: Record<string, any> = {
         identify: identify(),
         ping: ping(),
       };
@@ -140,7 +148,8 @@ export class P2PManager {
           : { listen: ['/ip4/0.0.0.0/tcp/0/ws'] },
         transports: [webSockets()],
         connectionEncrypters: [noise()],
-        services,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        services: services as any,
       });
 
       this.setupEventListeners();
@@ -209,7 +218,7 @@ export class P2PManager {
       }
     });
 
-    this.libp2p.handle(CHAT_PROTOCOL, async (data: any) => {
+    this.libp2p.handle(CHAT_PROTOCOL, async (data: { stream: Stream; connection: Connection }) => {
       const stream = data.stream;
       const connection = data.connection;
       const remotePeer = connection.remotePeer.toString();
@@ -217,7 +226,7 @@ export class P2PManager {
       try {
         await pipe(
           stream,
-          async function* (source: any) {
+          async function* (source: AsyncIterable<Uint8Array>) {
             for await (const data of source) {
               const messageStr = uint8ArrayToString(data.subarray());
               try {
@@ -228,7 +237,7 @@ export class P2PManager {
               }
             }
           },
-          async function* (source: any) {
+          async function* (source: AsyncIterable<Uint8Array>) {
             for await (const message of source) {
               await this.handleIncomingMessage(message as P2PMessage, remotePeer);
               const ack = this.createAckMessage((message as P2PMessage).id);
@@ -317,7 +326,7 @@ export class P2PManager {
       await pipe(
         [uint8ArrayFromString(JSON.stringify(message))],
         stream,
-        async function* (source: any) {
+        async function* (source: AsyncIterable<Uint8Array>) {
           for await (const data of source) {
             yield uint8ArrayToString(data.subarray());
           }
@@ -557,7 +566,8 @@ export class P2PManager {
     }
 
     try {
-      const dht = (this.libp2p as any).services?.dht;
+      const services = (this.libp2p as unknown as { services: { dht?: DHTService } }).services;
+      const dht = services?.dht;
       if (!dht) {
         console.warn('DHT服务不可用');
         return false;
@@ -580,7 +590,8 @@ export class P2PManager {
     }
 
     try {
-      const dht = (this.libp2p as any).services?.dht;
+      const services = (this.libp2p as unknown as { services: { dht?: DHTService } }).services;
+      const dht = services?.dht;
       if (!dht) return null;
 
       const result = await dht.get(uint8ArrayFromString(key));

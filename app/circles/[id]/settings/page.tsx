@@ -12,6 +12,7 @@ import Card from '@/components/ui/Card';
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/common/BackButton';
 import { getIPFSUrl } from '@/lib/ipfs';
+import { toast } from '@/lib/toast';
 
 
 interface Member {
@@ -189,7 +190,7 @@ export default function CircleSettingsPage() {
         } catch (error) {
           console.error('图标上传失败:', error);
           setAvatarUploading(false);
-          alert('图标上传失败，请重试');
+          toast.error('图标上传失败，请重试');
           setSaving(false);
           return;
         }
@@ -233,10 +234,10 @@ export default function CircleSettingsPage() {
         setFormData(prev => ({ ...prev, avatarCid: null }));
       }
       setAvatarFile(null);
-      alert('圈子设置已保存');
+      toast.success('圈子设置已保存');
     } catch (err) {
       console.error('更新失败:', err);
-      alert('更新失败，请重试');
+      toast.error('更新失败，请重试');
     } finally {
       setSaving(false);
       setAvatarUploading(false);
@@ -263,7 +264,7 @@ export default function CircleSettingsPage() {
         router.push('/circles');
       } catch (err) {
         console.error('删除失败:', err);
-        alert('删除失败，请重试');
+        toast.error('删除失败，请重试');
       }
     }
   };
@@ -295,7 +296,7 @@ export default function CircleSettingsPage() {
       setShowMemberModal(false);
     } catch (err) {
       console.error('踢出失败:', err);
-      alert('踢出失败，请重试');
+      toast.error('踢出失败，请重试');
     }
   };
 
@@ -324,7 +325,7 @@ export default function CircleSettingsPage() {
       setShowPostModal(false);
     } catch (err) {
       console.error('删除文章失败:', err);
-      alert('删除文章失败，请重试');
+      toast.error('删除文章失败，请重试');
     }
   };
 
