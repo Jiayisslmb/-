@@ -13,7 +13,6 @@ import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/common/BackButton';
 import { getIPFSUrl } from '@/lib/ipfs';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Member {
   id: number;
@@ -78,7 +77,7 @@ export default function CircleSettingsPage() {
         setLoading(true);
         const token = localStorage.getItem('token');
         
-        const response = await fetch(`${API_URL}/circles/${circleId}`, {
+        const response = await fetch(`/api/circles/${circleId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -102,7 +101,7 @@ export default function CircleSettingsPage() {
         }
         
         // 获取成员列表
-        const membersResponse = await fetch(`${API_URL}/circles/${circleId}/members`, {
+        const membersResponse = await fetch(`/api/circles/${circleId}/members`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -114,7 +113,7 @@ export default function CircleSettingsPage() {
         }
         
         // 获取圈子文章
-        const postsResponse = await fetch(`${API_URL}/circles/${circleId}/posts`, {
+        const postsResponse = await fetch(`/api/circles/${circleId}/posts`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -209,7 +208,7 @@ export default function CircleSettingsPage() {
         submitData.avatarCid = originalAvatarCid;
       }
       console.log('提交圈子设置数据:', JSON.stringify(submitData));
-      const response = await fetch(`${API_URL}/circles/${circleId}`, {
+      const response = await fetch(`/api/circles/${circleId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -250,7 +249,7 @@ export default function CircleSettingsPage() {
     if (confirm('确定要删除这个圈子吗？此操作不可撤销。')) {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/circles/${circleId}`, {
+        const response = await fetch(`/api/circles/${circleId}`, {
           method: 'DELETE',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -277,7 +276,7 @@ export default function CircleSettingsPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/circles/${circleId}/leave`, {
+      const response = await fetch(`/api/circles/${circleId}/leave`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -308,7 +307,7 @@ export default function CircleSettingsPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/content/posts/${post.id}`, {
+      const response = await fetch(`/api/content/posts/${post.id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,

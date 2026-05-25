@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface TrendingTopic {
   id: string;
@@ -22,7 +21,7 @@ export default function TrendingTopics() {
     const fetchTrends = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}/topics/trending?limit=10`);
+        const response = await fetch(`/api/topics/trending?limit=10`);
 
         if (response.ok) {
           const text = await response.text();

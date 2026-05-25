@@ -14,7 +14,6 @@ import BackButton from '@/components/common/BackButton';
 import { getCircle, joinCircle, leaveCircle } from '@/lib/api';
 import { getIPFSUrl } from '@/lib/ipfs';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export default function CircleDetailPage() {
   const params = useParams();
@@ -44,7 +43,7 @@ export default function CircleDetailPage() {
         const token = localStorage.getItem('token');
         
         // 获取圈子详情
-        const response = await fetch(`${API_URL}/circles/${circleId}`, {
+        const response = await fetch(`/api/circles/${circleId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

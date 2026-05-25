@@ -13,7 +13,6 @@ import Link from 'next/link';
 import BackButton from '@/components/common/BackButton';
 import OnlineStatusIndicator from '@/components/common/OnlineStatusIndicator';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Conversation {
   userId: string;
@@ -80,13 +79,13 @@ export default function MessagesPage() {
 
     try {
       if (articleId) {
-        const res = await fetch(`${API_URL}/content/articles/${articleId}`, {
+        const res = await fetch(`/api/content/articles/${articleId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         return res.ok;
       }
       if (momentId) {
-        const res = await fetch(`${API_URL}/content/moments/${momentId}`, {
+        const res = await fetch(`/api/content/moments/${momentId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         return res.ok;

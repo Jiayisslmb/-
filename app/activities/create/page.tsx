@@ -34,9 +34,8 @@ export default function CreateActivityPage() {
     e.preventDefault();
     setLoading(true);
 
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
     try {
-      const response = await fetch(`${API_URL}/activities`, {
+      const response = await fetch(`/api/activities`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

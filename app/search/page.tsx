@@ -10,7 +10,6 @@ import Link from 'next/link';
 import BackButton from '@/components/common/BackButton';
 import { getIPFSUrl } from '@/lib/ipfs';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Topic {
   id: number;
@@ -67,7 +66,7 @@ export default function SearchPage() {
         const token = localStorage.getItem('token');
         if (token) {
           try {
-            await fetch(`${API_URL}/topics/search`, {
+            await fetch(`/api/topics/search`, {
               method: 'POST',
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -82,11 +81,11 @@ export default function SearchPage() {
 
         const [userResults, contentResults, topicsResults] = await Promise.allSettled([
           searchUsers(query),
-          fetch(`${API_URL}/content/search?q=${encodeURIComponent(query)}&take=50`).then(res => {
+          fetch(`/api/content/search?q=${encodeURIComponent(query)}&take=50`).then(res => {
             if (!res.ok) return [];
             return res.text().then(text => text ? JSON.parse(text) : []);
           }),
-          fetch(`${API_URL}/topics/search?keyword=${encodeURIComponent(query)}`).then(res => {
+          fetch(`/api/topics/search?keyword=${encodeURIComponent(query)}`).then(res => {
             if (!res.ok) return [];
             return res.text().then(text => text ? JSON.parse(text) : []);
           }),

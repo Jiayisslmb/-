@@ -8,7 +8,6 @@ import Avatar from '@/components/ui/Avatar';
 import { getIPFSUrl } from '@/lib/ipfs';
 import UserDisplay from '@/components/common/UserDisplay';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Circle {
   id: number;
@@ -41,7 +40,7 @@ export default function CirclesManagementPage() {
   const fetchCircles = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/circles`, {
+      const response = await fetch(`/api/circles`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -64,7 +63,7 @@ export default function CirclesManagementPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/circles/${circleId}`, {
+      const response = await fetch(`/api/circles/${circleId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,

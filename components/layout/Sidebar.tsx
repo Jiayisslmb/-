@@ -6,7 +6,6 @@ import { useAuth } from '@/lib/auth';
 import Card from '@/components/ui/Card';
 import { useState, useEffect } from 'react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Circle {
   id: number;
@@ -27,7 +26,7 @@ export default function Sidebar() {
       if (isAuthenticated && user) {
         try {
           const token = localStorage.getItem('token');
-          const response = await fetch(`${API_URL}/circles/user/${user.id}`, {
+          const response = await fetch(`/api/circles/user/${user.id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (response.ok) {

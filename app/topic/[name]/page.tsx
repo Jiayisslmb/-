@@ -10,7 +10,6 @@ import PostItem, { Post } from '@/components/content/PostItem';
 import Link from 'next/link';
 import { getIPFSUrl } from '@/lib/ipfs';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Topic {
   id: number;
@@ -35,7 +34,7 @@ export default function TopicPage() {
       try {
         setLoading(true);
         
-        const topicRes = await fetch(`${API_URL}/topics/${encodeURIComponent(topicName)}`);
+        const topicRes = await fetch(`/api/topics/${encodeURIComponent(topicName)}`);
         if (!topicRes.ok) {
           setError('话题不存在');
           setLoading(false);

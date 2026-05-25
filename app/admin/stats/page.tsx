@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Card from '@/components/ui/Card';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Stat {
   label: string;
@@ -127,14 +126,14 @@ export default function StatsPage() {
           throw new Error('登录已失效，请重新登录');
         }
 
-        const statsResponse = await fetch(`${API_URL}/admin/statistics`, {
+        const statsResponse = await fetch(`/api/admin/statistics`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!statsResponse.ok) throw new Error('获取统计数据失败');
         const data = await statsResponse.json();
 
-        const postingResponse = await fetch(`${API_URL}/admin/statistics/posting?days=7`, {
+        const postingResponse = await fetch(`/api/admin/statistics/posting?days=7`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         let postingData: PostingStat[] = [];
@@ -153,7 +152,7 @@ export default function StatsPage() {
         }
         setPostingStats(postingData);
 
-        const interactionResponse = await fetch(`${API_URL}/admin/statistics/interaction`, {
+        const interactionResponse = await fetch(`/api/admin/statistics/interaction`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         let interactionData: InteractionStat | null = null;

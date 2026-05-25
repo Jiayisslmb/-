@@ -10,7 +10,6 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import BackButton from '@/components/common/BackButton';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Circle {
   id: number;
@@ -50,7 +49,7 @@ export default function CreateArticlePage() {
     const fetchCircles = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/circles?take=100`, {
+        const response = await fetch(`/api/circles?take=100`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.ok) {
@@ -64,7 +63,7 @@ export default function CreateArticlePage() {
 
     const fetchTopics = async () => {
       try {
-        const response = await fetch(`${API_URL}/topics?take=20`);
+        const response = await fetch(`/api/topics?take=20`);
         if (response.ok) {
           const data = await response.json();
           setTopics(data);
@@ -87,7 +86,7 @@ export default function CreateArticlePage() {
     }
     const searchTopics = async () => {
       try {
-        const response = await fetch(`${API_URL}/topics/search?keyword=${encodeURIComponent(tagInput)}`);
+        const response = await fetch(`/api/topics/search?keyword=${encodeURIComponent(tagInput)}`);
         if (response.ok) {
           const data = await response.json();
           setTopics(data);

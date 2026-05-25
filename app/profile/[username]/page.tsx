@@ -75,7 +75,6 @@ import { getIPFSUrl } from '@/lib/ipfs';
  *
  * @env NEXT_PUBLIC_API_URL 生产环境应通过此变量配置
  */
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 /**
  * 动态数据接口定义
@@ -197,7 +196,7 @@ export default function ProfileDetailPage() {
     const fetchMoments = async () => {
       try {
         // 步骤1：通过用户名查询用户信息
-        const userRes = await fetch(`${API_URL}/users/username/${username}`);
+        const userRes = await fetch(`/api/users/username/${username}`);
         if (!userRes.ok) return; // 用户不存在或网络错误
 
         const userData = await userRes.json();
@@ -208,7 +207,7 @@ export default function ProfileDetailPage() {
         setIsOwnProfile(String(userData.id) === currentUserId);
 
         // 步骤3：获取该用户的动态列表
-        const momentsRes = await fetch(`${API_URL}/content/moments/user/${userData.id}`);
+        const momentsRes = await fetch(`/api/content/moments/user/${userData.id}`);
         if (momentsRes.ok) {
           setMoments(await momentsRes.json());
         }
@@ -247,7 +246,7 @@ export default function ProfileDetailPage() {
    */
   const handleDeletePost = async (postId: string) => {
     try {
-      const response = await fetch(`${API_URL}/content/moments/${postId}`, {
+      const response = await fetch(`/api/content/moments/${postId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,

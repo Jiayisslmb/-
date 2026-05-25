@@ -9,7 +9,6 @@ import Button from '@/components/ui/Button';
 import { useAuth } from '@/lib/auth';
 import { getIPFSUrl } from '@/lib/ipfs';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Circle {
   id: number;
@@ -43,7 +42,7 @@ export default function CirclesPage() {
 
   const fetchCircles = async () => {
     try {
-      const response = await fetch(`${API_URL}/circles`);
+      const response = await fetch(`/api/circles`);
       if (response.ok) {
         const data = await response.json();
         setCircles(Array.isArray(data) ? data : []);
@@ -58,7 +57,7 @@ export default function CirclesPage() {
   const fetchJoinedCircles = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/circles/user/${user?.id}`, {
+      const response = await fetch(`/api/circles/user/${user?.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -81,7 +80,7 @@ export default function CirclesPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/circles/${circleId}/join`, {
+      const response = await fetch(`/api/circles/${circleId}/join`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -105,7 +104,7 @@ export default function CirclesPage() {
   const handleLeave = async (circleId: number) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/circles/${circleId}/leave`, {
+      const response = await fetch(`/api/circles/${circleId}/leave`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

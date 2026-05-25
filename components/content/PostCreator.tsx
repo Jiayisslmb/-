@@ -8,7 +8,6 @@ import Button from '@/components/ui/Button';
 import { useAuth } from '@/lib/auth';
 import Link from 'next/link';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Topic {
   id: number;
@@ -40,7 +39,7 @@ export default function MomentCreator() {
   useEffect(() => {
     const fetchTopics = async () => {
       try {
-        const response = await fetch(`${API_URL}/topics?take=20`);
+        const response = await fetch(`/api/topics?take=20`);
         if (response.ok) {
           const data = await response.json();
           setTopics(data);
@@ -59,7 +58,7 @@ export default function MomentCreator() {
     }
     const searchTopics = async () => {
       try {
-        const response = await fetch(`${API_URL}/topics/search?keyword=${encodeURIComponent(tagInput)}`);
+        const response = await fetch(`/api/topics/search?keyword=${encodeURIComponent(tagInput)}`);
         if (response.ok) {
           const data = await response.json();
           setTopics(data);
@@ -93,7 +92,7 @@ export default function MomentCreator() {
   const fetchRepostContent = async (type: string, id: string) => {
     try {
       const basePath = type === 'article' ? '/content/articles' : '/content/moments';
-      const response = await fetch(`${API_URL}${basePath}/${id}`);
+      const response = await fetch(`/api${basePath}/${id}`);
       if (response.ok) {
         const postData = await response.json();
         const postUrl = `${window.location.origin}/content/${type}/${id}`;
@@ -198,7 +197,7 @@ export default function MomentCreator() {
           if (type && id) {
             try {
               const basePath = type === 'article' ? '/content/articles' : '/content/moments';
-              const response = await fetch(`${API_URL}${basePath}/${id}/repost?action=count_only`, {
+              const response = await fetch(`/api${basePath}/${id}/repost?action=count_only`, {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${localStorage.getItem('token')}`,

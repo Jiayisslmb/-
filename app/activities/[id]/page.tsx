@@ -7,7 +7,6 @@ import { useAuth } from '@/lib/auth';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Activity {
   id: string;
@@ -34,7 +33,7 @@ export default function ActivityPage() {
   useEffect(() => {
     const fetchActivity = async () => {
       try {
-        const response = await fetch(`${API_URL}/activities/${params.id}`, {
+        const response = await fetch(`/api/activities/${params.id}`, {
           credentials: 'include',
         });
         if (response.ok) {

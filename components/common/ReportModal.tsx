@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -61,19 +60,19 @@ export default function ReportModal({
 
       switch (type) {
         case 'user':
-          endpoint = `${API_URL}/users/${targetId}/report`;
+          endpoint = `/api/users/${targetId}/report`;
           break;
         case 'post':
-          endpoint = `${API_URL}/content/posts/${targetId}/report`;
+          endpoint = `/api/content/posts/${targetId}/report`;
           break;
         case 'article':
-          endpoint = `${API_URL}/content/articles/${targetId}/report`;
+          endpoint = `/api/content/articles/${targetId}/report`;
           break;
         case 'moment':
-          endpoint = `${API_URL}/content/moments/${targetId}/report`;
+          endpoint = `/api/content/moments/${targetId}/report`;
           break;
         case 'circle':
-          endpoint = `${API_URL}/content/circles/${targetId}/report`;
+          endpoint = `/api/content/circles/${targetId}/report`;
           break;
       }
 

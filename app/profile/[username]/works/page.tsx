@@ -10,7 +10,6 @@ import PostItem from '@/components/content/PostItem';
 import ProfileLayout from '@/components/profile/ProfileLayout';
 import { getIPFSUrl } from '@/lib/ipfs';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface ArticleData {
   id: number;
@@ -47,11 +46,11 @@ export default function UserWorksPage() {
   useEffect(() => {
     const fetchUserArticles = async () => {
       try {
-        const userRes = await fetch(`${API_URL}/users/username/${username}`);
+        const userRes = await fetch(`/api/users/username/${username}`);
         if (!userRes.ok) throw new Error('用户不存在');
         const userData = await userRes.json();
 
-        const articlesRes = await fetch(`${API_URL}/content/articles/user/${userData.id}`);
+        const articlesRes = await fetch(`/api/content/articles/user/${userData.id}`);
         if (articlesRes.ok) {
           setArticles(await articlesRes.json());
         }

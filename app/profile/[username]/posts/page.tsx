@@ -10,7 +10,6 @@ import Card from '@/components/ui/Card';
 import PostItem from '@/components/content/PostItem';
 import { getIPFSUrl } from '@/lib/ipfs';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface PostData {
   id: number;
@@ -39,11 +38,11 @@ export default function UserPostsPage() {
   useEffect(() => {
     const fetchUserAndMoments = async () => {
       try {
-        const userRes = await fetch(`${API_URL}/users/username/${username}`);
+        const userRes = await fetch(`/api/users/username/${username}`);
         if (!userRes.ok) throw new Error('用户不存在');
         const userData = await userRes.json();
 
-        const momentsRes = await fetch(`${API_URL}/content/moments/user/${userData.id}`);
+        const momentsRes = await fetch(`/api/content/moments/user/${userData.id}`);
         if (momentsRes.ok) {
           setMoments(await momentsRes.json());
         }

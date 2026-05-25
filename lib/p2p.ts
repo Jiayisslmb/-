@@ -11,7 +11,6 @@ import { ping } from '@libp2p/ping';
 import { pipe } from 'it-pipe';
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string';
 import { toString as uint8ArrayToString } from 'uint8arrays/to-string';
-import * as crypto from 'crypto';
 
 export interface P2PMessage {
   id: string;
@@ -40,6 +39,44 @@ export interface PeerInfo {
   isOnline: boolean;
 }
 
+function hexToUint8Array(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  return bytes;
+}
+
+function uint8ArrayToHex(arr: Uint8Array): string {
+  return Array.from(arr)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function stringToUint8Array(str: string): Uint8Array {
+  return new TextEncoder().encode(str);
+}
+
+async function importAesKey(rawKey: Uint8Array): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    'raw',
+    rawKey,
+    'AES-GCM',
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function importHmacKey(rawKey: Uint8Array): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    'raw',
+    rawKey,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify']
+  );
+}
+
 const CHAT_PROTOCOL = '/desocial/chat/1.0.0';
 const DEFAULT_CONFIG: P2PConfig = {
   enableDHT: true,
@@ -58,8 +95,8 @@ export class P2PManager {
   private pendingMessages: Map<string, P2PMessage[]> = new Map();
   private connectionStatus: Map<string, 'connected' | 'connecting' | 'disconnected'> = new Map();
   private peers: Map<string, PeerInfo> = new Map();
-  private encryptionKey: Buffer | null = null;
-  private heartbeatTimer: NodeJS.Timeout | null = null;
+  private rawKey: Uint8Array | null = null;
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private config: P2PConfig;
   private isInitialized: boolean = false;
   private messageQueue: P2PMessage[] = [];
@@ -110,7 +147,8 @@ export class P2PManager {
       await this.libp2p.start();
 
       if (this.config.enableEncryption) {
-        this.encryptionKey = crypto.randomBytes(32);
+        this.rawKey = new Uint8Array(32);
+        crypto.getRandomValues(this.rawKey);
       }
 
       this.startHeartbeat();
@@ -118,7 +156,7 @@ export class P2PManager {
 
       const peerId = this.libp2p.peerId.toString();
       console.log(`P2P节点初始化成功，Peer ID: ${peerId}`);
-      
+
       const multiaddrs = this.libp2p.getMultiaddrs();
       console.log('监听地址:', multiaddrs.map(m => m.toString()).join(', '));
 
@@ -137,7 +175,7 @@ export class P2PManager {
       const peerId = event.detail.id.toString();
       console.log('发现新节点:', peerId);
       this.connectionStatus.set(peerId, 'disconnected');
-      
+
       this.peers.set(peerId, {
         id: peerId,
         addresses: [],
@@ -150,13 +188,13 @@ export class P2PManager {
       const peerId = event.detail.toString();
       console.log('连接到节点:', peerId);
       this.connectionStatus.set(peerId, 'connected');
-      
+
       const peerInfo = this.peers.get(peerId);
       if (peerInfo) {
         peerInfo.isOnline = true;
         peerInfo.lastSeen = Date.now();
       }
-      
+
       this.sendPendingMessages(peerId);
     });
 
@@ -164,7 +202,7 @@ export class P2PManager {
       const peerId = event.detail.toString();
       console.log('与节点断开连接:', peerId);
       this.connectionStatus.set(peerId, 'disconnected');
-      
+
       const peerInfo = this.peers.get(peerId);
       if (peerInfo) {
         peerInfo.isOnline = false;
@@ -175,7 +213,7 @@ export class P2PManager {
       const stream = data.stream;
       const connection = data.connection;
       const remotePeer = connection.remotePeer.toString();
-      
+
       try {
         await pipe(
           stream,
@@ -208,9 +246,9 @@ export class P2PManager {
   private async handleIncomingMessage(message: P2PMessage, fromPeer: string): Promise<void> {
     let processedMessage = message;
 
-    if (message.encrypted && this.encryptionKey) {
+    if (message.encrypted && this.rawKey) {
       try {
-        processedMessage = this.decryptMessage(message);
+        processedMessage = await this.decryptMessage(message);
       } catch (error) {
         console.error('解密消息失败:', error);
         return;
@@ -246,7 +284,7 @@ export class P2PManager {
     }
 
     const message: P2PMessage = {
-      id: crypto.randomUUID(),
+      id: globalThis.crypto.randomUUID(),
       from: this.libp2p.peerId.toString(),
       to: toPeerId,
       type,
@@ -255,9 +293,9 @@ export class P2PManager {
       encrypted: this.config.enableEncryption,
     };
 
-    if (this.config.enableEncryption && this.encryptionKey) {
-      message.content = this.encryptContent(content);
-      message.signature = this.signMessage(message);
+    if (this.config.enableEncryption && this.rawKey) {
+      message.content = await this.encryptContent(content);
+      message.signature = await this.signMessage(message);
     }
 
     const connectionStatus = this.connectionStatus.get(toPeerId);
@@ -275,7 +313,7 @@ export class P2PManager {
       }
 
       const stream = await this.libp2p.dialProtocol(connections[0].remoteAddr, CHAT_PROTOCOL);
-      
+
       await pipe(
         [uint8ArrayFromString(JSON.stringify(message))],
         stream,
@@ -300,7 +338,7 @@ export class P2PManager {
     if (!pending || pending.length === 0) return;
 
     console.log(`发送 ${pending.length} 条待处理消息到 ${peerId}`);
-    
+
     const failed: P2PMessage[] = [];
     for (const message of pending) {
       const success = await this.sendMessage(peerId, message.content, message.type);
@@ -325,7 +363,7 @@ export class P2PManager {
 
   private queueMessage(toPeerId: string, content: string, type: P2PMessage['type']): void {
     this.messageQueue.push({
-      id: crypto.randomUUID(),
+      id: globalThis.crypto.randomUUID(),
       from: '',
       to: toPeerId,
       type,
@@ -337,7 +375,7 @@ export class P2PManager {
 
   private createAckMessage(originalId: string): P2PMessage {
     return {
-      id: crypto.randomUUID(),
+      id: globalThis.crypto.randomUUID(),
       from: this.libp2p?.peerId.toString() || '',
       to: '',
       type: 'ack',
@@ -347,62 +385,69 @@ export class P2PManager {
     };
   }
 
-  private encryptContent(content: string): string {
-    if (!this.encryptionKey) return content;
-    
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv('aes-256-gcm', this.encryptionKey, iv);
-    
-    let encrypted = cipher.update(content, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    
-    const authTag = cipher.getAuthTag();
-    
+  private async encryptContent(content: string): Promise<string> {
+    if (!this.rawKey) return content;
+
+    const iv = new Uint8Array(12);
+    crypto.getRandomValues(iv);
+
+    const cryptoKey = await importAesKey(this.rawKey);
+    const data = stringToUint8Array(content);
+    const encrypted = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv, tagLength: 128 },
+      cryptoKey,
+      data
+    );
+
     return JSON.stringify({
-      iv: iv.toString('hex'),
-      data: encrypted,
-      tag: authTag.toString('hex'),
+      iv: uint8ArrayToHex(iv),
+      data: uint8ArrayToHex(new Uint8Array(encrypted)),
     });
   }
 
-  private decryptMessage(message: P2PMessage): P2PMessage {
-    if (!this.encryptionKey) return message;
-    
+  private async decryptMessage(message: P2PMessage): Promise<P2PMessage> {
+    if (!this.rawKey) return message;
+
     const encrypted = JSON.parse(message.content);
-    const decipher = crypto.createDecipheriv(
-      'aes-256-gcm',
-      this.encryptionKey,
-      Buffer.from(encrypted.iv, 'hex')
+    const iv = hexToUint8Array(encrypted.iv);
+    const ciphertext = hexToUint8Array(encrypted.data);
+
+    const cryptoKey = await importAesKey(this.rawKey);
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv, tagLength: 128 },
+      cryptoKey,
+      ciphertext
     );
-    
-    decipher.setAuthTag(Buffer.from(encrypted.tag, 'hex'));
-    
-    let decrypted = decipher.update(encrypted.data, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    
-    return { ...message, content: decrypted, encrypted: false };
+
+    return {
+      ...message,
+      content: new TextDecoder().decode(decrypted),
+      encrypted: false,
+    };
   }
 
-  private signMessage(message: P2PMessage): string {
-    if (!this.encryptionKey) return '';
-    
-    const data = `${message.id}${message.from}${message.to}${message.timestamp}`;
-    return crypto
-      .createHmac('sha256', this.encryptionKey)
-      .update(data)
-      .digest('hex');
+  private async signMessage(message: P2PMessage): Promise<string> {
+    if (!this.rawKey) return '';
+
+    const data = stringToUint8Array(
+      `${message.id}${message.from}${message.to}${message.timestamp}`
+    );
+    const cryptoKey = await importHmacKey(this.rawKey);
+    const signature = await crypto.subtle.sign('HMAC', cryptoKey, data);
+    return uint8ArrayToHex(new Uint8Array(signature));
   }
 
-  verifyMessage(message: P2PMessage): boolean {
-    if (!message.signature || !this.encryptionKey) return true;
-    
-    const data = `${message.id}${message.from}${message.to}${message.timestamp}`;
-    const expectedSignature = crypto
-      .createHmac('sha256', this.encryptionKey)
-      .update(data)
-      .digest('hex');
-    
-    return message.signature === expectedSignature;
+  async verifyMessage(message: P2PMessage): Promise<boolean> {
+    if (!message.signature || !this.rawKey) return true;
+
+    const data = stringToUint8Array(
+      `${message.id}${message.from}${message.to}${message.timestamp}`
+    );
+    const cryptoKey = await importHmacKey(this.rawKey);
+    const expectedSignature = await crypto.subtle.sign('HMAC', cryptoKey, data);
+    const expectedHex = uint8ArrayToHex(new Uint8Array(expectedSignature));
+
+    return message.signature === expectedHex;
   }
 
   private getConversationKey(peer1: string, peer2: string): string {
@@ -517,7 +562,7 @@ export class P2PManager {
         console.warn('DHT服务不可用');
         return false;
       }
-      
+
       await dht.put(
         uint8ArrayFromString(key),
         uint8ArrayFromString(value)

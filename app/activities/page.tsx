@@ -9,7 +9,6 @@ import Button from '@/components/ui/Button';
 import PageHeader from '@/components/PageHeader';
 import BackButton from '@/components/common/BackButton';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Activity {
   id: string;
@@ -35,7 +34,7 @@ export default function ActivitiesPage() {
   useEffect(() => {
     const fetchActivities = async () => {
       try {
-        const response = await fetch(`${API_URL}/activities`);
+        const response = await fetch(`/api/activities`);
         if (response.ok) {
           const data = await response.json();
           setActivities(Array.isArray(data) ? data : []);

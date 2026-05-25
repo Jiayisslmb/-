@@ -8,7 +8,6 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { useAuth } from '@/lib/auth';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Content {
   id: number;
@@ -44,7 +43,7 @@ export default function ContentManagementPage() {
   const fetchContents = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/admin/posts`, {
+      const response = await fetch(`/api/admin/posts`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -52,7 +51,7 @@ export default function ContentManagementPage() {
       if (response.ok) {
         const posts = await response.json();
         
-        const articlesResponse = await fetch(`${API_URL}/admin/articles`, {
+        const articlesResponse = await fetch(`/api/admin/articles`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -81,8 +80,8 @@ export default function ContentManagementPage() {
     try {
       const token = localStorage.getItem('token');
       const endpoint = (type === 'post' || type === 'moment')
-        ? `${API_URL}/admin/posts/${contentId}` 
-        : `${API_URL}/admin/articles/${contentId}`;
+        ? `/api/admin/posts/${contentId}` 
+        : `/api/admin/articles/${contentId}`;
       
       const response = await fetch(endpoint, {
         method: 'DELETE',
@@ -116,8 +115,8 @@ export default function ContentManagementPage() {
     try {
       const token = localStorage.getItem('token');
       const endpoint = (type === 'post' || type === 'moment')
-        ? `${API_URL}/admin/posts/${contentId}/restore` 
-        : `${API_URL}/admin/articles/${contentId}/restore`;
+        ? `/api/admin/posts/${contentId}/restore` 
+        : `/api/admin/articles/${contentId}/restore`;
       
       const response = await fetch(endpoint, {
         method: 'POST',

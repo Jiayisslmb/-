@@ -1,6 +1,7 @@
 // 统一 HTTP 客户端 — 所有前端 fetch 请求的唯一入口
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+// 使用相对路径，通过 Next.js rewrites 代理到后端
+const API_BASE = '/api';
 
 class ApiError extends Error {
   status: number;
@@ -39,7 +40,7 @@ const DEFAULT_TIMEOUT = 30000;
 const inflightRequests = new Map<string, Promise<unknown>>();
 
 function buildUrl(endpoint: string): string {
-  return `${API_BASE_URL}${endpoint}`;
+  return `${API_BASE}${endpoint}`;
 }
 
 function getAuthHeaders(): Record<string, string> {

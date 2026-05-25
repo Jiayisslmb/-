@@ -20,7 +20,6 @@ interface User {
   bio?: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export default function FollowersPage() {
   const params = useParams();
@@ -39,7 +38,7 @@ export default function FollowersPage() {
       try {
         setLoading(true);
 
-        const userRes = await fetch(`${API_URL}/users/${userId}`);
+        const userRes = await fetch(`/api/users/${userId}`);
         if (userRes.ok) {
           const userData = await userRes.json();
           setProfileUsername(userData.username);
@@ -52,7 +51,7 @@ export default function FollowersPage() {
           }
         }
 
-        const res = await fetch(`${API_URL}/users/${userId}/followers`, {
+        const res = await fetch(`/api/users/${userId}/followers`, {
           headers: currentUser
             ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
             : {},
@@ -63,7 +62,7 @@ export default function FollowersPage() {
 
           if (currentUser) {
             const followRes = await fetch(
-              `${API_URL}/users/${currentUser.id}/following`,
+              `/api/users/${currentUser.id}/following`,
               {
                 headers: {
                   Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -100,7 +99,7 @@ export default function FollowersPage() {
     try {
       const isFollowing = followingSet.has(targetUserId);
       const method = isFollowing ? 'DELETE' : 'POST';
-      const res = await fetch(`${API_URL}/users/${targetUserId}/follow`, {
+      const res = await fetch(`/api/users/${targetUserId}/follow`, {
         method,
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,

@@ -11,7 +11,6 @@ import { useAuth } from '@/lib/auth';
 import { getIPFSUrl } from '@/lib/ipfs';
 import UserDisplay from '@/components/common/UserDisplay';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface User {
   id: number;
@@ -39,7 +38,7 @@ export default function UserManagementPage() {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/admin/users`, {
+      const response = await fetch(`/api/admin/users`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -58,7 +57,7 @@ export default function UserManagementPage() {
   const handleFreezeUser = async (userId: number) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/admin/users/${userId}/freeze`, {
+      const response = await fetch(`/api/admin/users/${userId}/freeze`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -80,7 +79,7 @@ export default function UserManagementPage() {
   const handleUnfreezeUser = async (userId: number) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/admin/users/${userId}/unfreeze`, {
+      const response = await fetch(`/api/admin/users/${userId}/unfreeze`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

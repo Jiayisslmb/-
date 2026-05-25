@@ -11,7 +11,6 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import SettingsLayout from '@/components/layout/SettingsLayout';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export default function ProfileSettingsPage() {
   const router = useRouter();

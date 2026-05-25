@@ -66,7 +66,6 @@ interface Comment {
   replies?: Reply[];
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export default function MomentDetailPage() {
   const params = useParams();
@@ -94,7 +93,7 @@ export default function MomentDetailPage() {
         let postData: any = null;
 
         try {
-          const momentRes = await fetch(`${API_URL}/content/moments/${postId}`);
+          const momentRes = await fetch(`/api/content/moments/${postId}`);
           if (momentRes.ok) {
             postData = await momentRes.json();
           } else {
@@ -130,7 +129,7 @@ export default function MomentDetailPage() {
 
         setLikes(postData._count?.momentlike || postData.likes || 0);
 
-        const commentsRes = await fetch(`${API_URL}/content/moments/${postId}/comments`);
+        const commentsRes = await fetch(`/api/content/moments/${postId}/comments`);
         if (commentsRes.ok) {
           const commentsData = await commentsRes.json();
           const commentKey = 'other_momentcomment';
@@ -169,7 +168,7 @@ export default function MomentDetailPage() {
         }
 
         if (isAuthenticated && user) {
-          const likeResponse = await fetch(`${API_URL}/content/moments/${postId}/is-liked`, {
+          const likeResponse = await fetch(`/api/content/moments/${postId}/is-liked`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
           });
           if (likeResponse.ok) {
@@ -177,7 +176,7 @@ export default function MomentDetailPage() {
             setIsLiked(likeData.isLiked);
           }
 
-          const collectResponse = await fetch(`${API_URL}/content/moments/${postId}/is-collected`, {
+          const collectResponse = await fetch(`/api/content/moments/${postId}/is-collected`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
           });
           if (collectResponse.ok) {
@@ -199,7 +198,7 @@ export default function MomentDetailPage() {
     if (!isAuthenticated) { alert('请先登录'); return; }
     try {
       const method = isLiked ? 'DELETE' : 'POST';
-      const response = await fetch(`${API_URL}/content/moments/${postId}/like`, {
+      const response = await fetch(`/api/content/moments/${postId}/like`, {
         method, headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       });
       if (response.ok) {
@@ -213,7 +212,7 @@ export default function MomentDetailPage() {
     if (!isAuthenticated) { alert('请先登录'); return; }
     try {
       const method = isCollected ? 'DELETE' : 'POST';
-      const response = await fetch(`${API_URL}/content/moments/${postId}/collect`, {
+      const response = await fetch(`/api/content/moments/${postId}/collect`, {
         method, headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       });
       if (response.ok) setIsCollected(!isCollected);
@@ -224,7 +223,7 @@ export default function MomentDetailPage() {
     if (!isAuthenticated) { alert('请先登录'); return; }
     try {
       // 使用 count_only 模式，只更新计数器，不创建新动态
-      const response = await fetch(`${API_URL}/content/moments/${postId}/repost?action=count_only`, {
+      const response = await fetch(`/api/content/moments/${postId}/repost?action=count_only`, {
         method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       });
       if (response.ok) {
@@ -242,7 +241,7 @@ export default function MomentDetailPage() {
     if (!newComment.trim()) return;
     try {
       setSubmittingComment(true);
-      const response = await fetch(`${API_URL}/content/moments/${postId}/comments`, {
+      const response = await fetch(`/api/content/moments/${postId}/comments`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: newComment }),
@@ -266,7 +265,7 @@ export default function MomentDetailPage() {
     if (!isAuthenticated) { alert('请先登录'); return; }
     if (!replyContent.trim()) return;
     try {
-      const response = await fetch(`${API_URL}/content/moments/${postId}/comments`, {
+      const response = await fetch(`/api/content/moments/${postId}/comments`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: replyContent, replyToId: parentId }),

@@ -6,7 +6,7 @@ export default function BackendStatusBanner() {
   const [isOnline, setIsOnline] = useState<boolean | null>(null);
   const [checking, setChecking] = useState(true);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const API_URL = '/api';
 
   const checkBackend = useCallback(async () => {
     setChecking(true);

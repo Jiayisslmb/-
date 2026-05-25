@@ -12,7 +12,6 @@ import BackButton from '@/components/common/BackButton';
 import LinkWithBack from '@/components/common/LinkWithBack';
 import UserDisplay from '@/components/common/UserDisplay';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface UserProfile {
   id: number;
@@ -294,4 +293,3 @@ export default function ProfileLayout({ children, activeTab }: ProfileLayoutProp
 }
 
 export type { UserProfile, UserStats };
-export { API_URL };

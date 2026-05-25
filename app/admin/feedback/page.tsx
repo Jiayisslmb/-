@@ -7,7 +7,6 @@ import Input from '@/components/ui/Input';
 import Avatar from '@/components/ui/Avatar';
 import { getIPFSUrl } from '@/lib/ipfs';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Report {
   id: number;
@@ -41,7 +40,7 @@ export default function FeedbackPage() {
   const fetchReports = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/admin/reports`, {
+      const response = await fetch(`/api/admin/reports`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -60,7 +59,7 @@ export default function FeedbackPage() {
   const handleUpdateStatus = async (reportId: number, newStatus: Report['status']) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/admin/reports/${reportId}/status`, {
+      const response = await fetch(`/api/admin/reports/${reportId}/status`, {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,

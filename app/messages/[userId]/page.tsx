@@ -15,7 +15,6 @@ import BackButton from '@/components/common/BackButton';
 import OnlineStatusIndicator from '@/components/common/OnlineStatusIndicator';
 import UserDisplay from '@/components/common/UserDisplay';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Message {
   id: string;
@@ -100,7 +99,7 @@ export default function ChatPage() {
       try {
         setLoading(true);
 
-        const userRes = await fetch(`${API_URL}/users/${otherUserId}`, {
+        const userRes = await fetch(`/api/users/${otherUserId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (userRes.ok) {
@@ -109,7 +108,7 @@ export default function ChatPage() {
         }
 
         const messagesRes = await fetch(
-          `${API_URL}/messages/conversation/${otherUserId}?skip=0&take=50`,
+          `/api/messages/conversation/${otherUserId}?skip=0&take=50`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (messagesRes.ok) {
@@ -359,7 +358,7 @@ export default function ChatPage() {
       setSending(true);
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/messages/${otherUserId}`, {
+        const response = await fetch(`/api/messages/${otherUserId}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -18,10 +18,9 @@ export default function LikeButton({ postId, initialLikes = 0, initialLiked = fa
   const handleLike = async () => {
     if (loading) return;
 
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/content/${postId}/like`, {
+      const response = await fetch(`/api/content/${postId}/like`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

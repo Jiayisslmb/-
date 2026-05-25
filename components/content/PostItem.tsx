@@ -193,10 +193,9 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
       
       try {
         const token = localStorage.getItem('token');
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
         const basePath = isArticle ? '/content/articles' : '/content/moments';
 
-        const likeResponse = await fetch(`${API_URL}${basePath}/${postId}/is-liked`, {
+        const likeResponse = await fetch(`/api${basePath}/${postId}/is-liked`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -206,7 +205,7 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
           setIsLiked(likeData.isLiked);
         }
 
-        const collectResponse = await fetch(`${API_URL}${basePath}/${postId}/is-collected`, {
+        const collectResponse = await fetch(`/api${basePath}/${postId}/is-collected`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -235,9 +234,8 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
 
     try {
       const method = isLiked ? 'DELETE' : 'POST';
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
       const basePath = isArticle ? '/content/articles' : '/content/moments';
-      const response = await fetch(`${API_URL}${basePath}/${post.id}/like`, {
+      const response = await fetch(`/api${basePath}/${post.id}/like`, {
         method,
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -263,9 +261,8 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
 
     try {
       const method = isCollected ? 'DELETE' : 'POST';
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
       const basePath = isArticle ? '/content/articles' : '/content/moments';
-      const response = await fetch(`${API_URL}${basePath}/${post.id}/collect`, {
+      const response = await fetch(`/api${basePath}/${post.id}/collect`, {
         method,
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -310,11 +307,10 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
       const postUrl = `${window.location.origin}/content/${isArticle ? 'article' : 'moment'}/${post.id}`;
       
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
         const basePath = isArticle ? '/content/articles' : '/content/moments';
         
         // 使用 count_only 模式，只更新计数器，不创建新动态
-        const response = await fetch(`${API_URL}${basePath}/${post.id}/repost?action=count_only`, {
+        const response = await fetch(`/api${basePath}/${post.id}/repost?action=count_only`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -387,9 +383,8 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
     }
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
       const basePath = isArticle ? '/content/articles' : '/content/moments';
-      const response = await fetch(`${API_URL}${basePath}/${post.id}`, {
+      const response = await fetch(`/api${basePath}/${post.id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -492,11 +487,10 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
                           if (!confirmed) return;
                           
                           try {
-                            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
                             const basePath = isArticle ? '/content/articles' : '/content/moments';
                             const token = localStorage.getItem('token');
                             
-                            const response = await fetch(`${API_URL}${basePath}/${post.id}`, {
+                            const response = await fetch(`/api${basePath}/${post.id}`, {
                               method: 'DELETE',
                               headers: {
                                 'Authorization': `Bearer ${token}`,

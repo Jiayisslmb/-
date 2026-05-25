@@ -11,7 +11,6 @@ import Input from '@/components/ui/Input';
 import Card from '@/components/ui/Card';
 import BackButton from '@/components/common/BackButton';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export default function CreateCirclePage() {
   const router = useRouter();
@@ -36,7 +35,7 @@ export default function CreateCirclePage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/circles`, {
+      const response = await fetch(`/api/circles`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

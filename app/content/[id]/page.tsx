@@ -70,7 +70,6 @@ interface Comment {
   replies?: Reply[];
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export default function ContentDetailPage() {
   const params = useParams();
@@ -98,7 +97,7 @@ export default function ContentDetailPage() {
         let postType: PostType = 'article';
 
         try {
-          const articleRes = await fetch(`${API_URL}/content/articles/${postId}`);
+          const articleRes = await fetch(`/api/content/articles/${postId}`);
           if (articleRes.ok) {
             postData = await articleRes.json();
             postType = 'article';
@@ -107,7 +106,7 @@ export default function ContentDetailPage() {
 
         if (!postData) {
           try {
-            const momentRes = await fetch(`${API_URL}/content/moments/${postId}`);
+            const momentRes = await fetch(`/api/content/moments/${postId}`);
             if (momentRes.ok) {
               postData = await momentRes.json();
               postType = 'moment';
@@ -142,7 +141,7 @@ export default function ContentDetailPage() {
         setLikes(postData._count?.articlelike || postData._count?.momentlike || postData.likes || 0);
 
         const basePath = postType === 'article' ? '/content/articles' : '/content/moments';
-        const commentsRes = await fetch(`${API_URL}${basePath}/${postId}/comments`);
+        const commentsRes = await fetch(`/api${basePath}/${postId}/comments`);
         if (commentsRes.ok) {
           const commentsData = await commentsRes.json();
           const commentKey = postType === 'article' ? 'other_articlecomment' : 'other_momentcomment';
@@ -181,7 +180,7 @@ export default function ContentDetailPage() {
         }
 
         if (isAuthenticated && user) {
-          const likeResponse = await fetch(`${API_URL}${basePath}/${postId}/is-liked`, {
+          const likeResponse = await fetch(`/api${basePath}/${postId}/is-liked`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
           });
           if (likeResponse.ok) {
@@ -189,7 +188,7 @@ export default function ContentDetailPage() {
             setIsLiked(likeData.isLiked);
           }
 
-          const collectResponse = await fetch(`${API_URL}${basePath}/${postId}/is-collected`, {
+          const collectResponse = await fetch(`/api${basePath}/${postId}/is-collected`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
           });
           if (collectResponse.ok) {
@@ -213,7 +212,7 @@ export default function ContentDetailPage() {
     if (!isAuthenticated) { alert('请先登录'); return; }
     try {
       const method = isLiked ? 'DELETE' : 'POST';
-      const response = await fetch(`${API_URL}${getBasePath()}/${postId}/like`, {
+      const response = await fetch(`/api${getBasePath()}/${postId}/like`, {
         method, headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       });
       if (response.ok) {
@@ -227,7 +226,7 @@ export default function ContentDetailPage() {
     if (!isAuthenticated) { alert('请先登录'); return; }
     try {
       const method = isCollected ? 'DELETE' : 'POST';
-      const response = await fetch(`${API_URL}${getBasePath()}/${postId}/collect`, {
+      const response = await fetch(`/api${getBasePath()}/${postId}/collect`, {
         method, headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       });
       if (response.ok) setIsCollected(!isCollected);
@@ -239,7 +238,7 @@ export default function ContentDetailPage() {
     try {
       const basePath = post?.type === 'article' ? '/content/articles' : '/content/moments';
       // 使用 count_only 模式，只更新计数器，不创建新动态
-      const response = await fetch(`${API_URL}${basePath}/${postId}/repost?action=count_only`, {
+      const response = await fetch(`/api${basePath}/${postId}/repost?action=count_only`, {
         method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       });
       if (response.ok) {
@@ -257,7 +256,7 @@ export default function ContentDetailPage() {
     if (!newComment.trim()) return;
     try {
       setSubmittingComment(true);
-      const response = await fetch(`${API_URL}${getBasePath()}/${postId}/comments`, {
+      const response = await fetch(`/api${getBasePath()}/${postId}/comments`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: newComment }),
@@ -281,7 +280,7 @@ export default function ContentDetailPage() {
     if (!isAuthenticated) { alert('请先登录'); return; }
     if (!replyContent.trim()) return;
     try {
-      const response = await fetch(`${API_URL}${getBasePath()}/${postId}/comments`, {
+      const response = await fetch(`/api${getBasePath()}/${postId}/comments`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: replyContent, replyToId: parentId }),
