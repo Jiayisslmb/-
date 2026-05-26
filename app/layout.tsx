@@ -27,6 +27,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className="bg-white text-gray-900">
+        <a href="#main-content" className="skip-link">跳转到主内容</a>
         <ErrorBoundary severity="page">
           <AuthProvider>
             <IPFSProvider>
@@ -36,7 +37,7 @@ export default function RootLayout({
                     <BackendStatusBanner />
                     <GlobalBackground />
                     <Header />
-                    <main className="container mx-auto px-4 py-8 min-h-screen relative z-10 pb-16 md:pb-8">
+                    <main id="main-content" className="container mx-auto px-4 py-8 min-h-screen relative z-10 pb-16 md:pb-8 page-enter">
                       <ErrorBoundary severity="section">
                         {children}
                       </ErrorBoundary>

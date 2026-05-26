@@ -1,51 +1,39 @@
 #!/bin/bash
-# 智能启动 Cloudflare Tunnel — 自动检测可用端口，避免冲突
+# Cloudflare Named Tunnel 启动脚本
+# 使用 Named Tunnel 实现永久公网访问 (无需担心地址变化)
 
 CLOUDFLARED="/c/Program Files (x86)/cloudflared/cloudflared.exe"
-BACKEND_PORT=${1:-3002}
 SERVER_DIR="../server"
+TUNNEL_CONFIG="$SERVER_DIR/cloudflare-tunnel.yml"
 
 echo "========================================"
-echo "  去中心化社交平台 — Tunnel 启动器"
+echo "  去中心化社交平台 — Named Tunnel"
 echo "========================================"
 
-# 1. 智能端口检测
-echo ""
-echo "[1/4] 检测端口可用性..."
-
-find_available_port() {
-  local port=$1
-  while netstat -ano 2>/dev/null | grep -q ":$port "; do
-    echo "  端口 $port 已被占用，尝试 $((port + 1))..."
-    port=$((port + 1))
-    if [ $port -gt 3020 ]; then
-      echo "  错误：3002-3020 范围内所有端口都被占用"
-      exit 1
-    fi
-  done
-  echo $port
-}
-
-BACKEND_PORT=$(find_available_port "$BACKEND_PORT")
-echo "  使用端口: $BACKEND_PORT"
-
-# 2. 更新后端端口配置
-echo ""
-echo "[2/4] 更新后端配置..."
-if [ -f "$SERVER_DIR/.env" ]; then
-  sed -i "s/^NEST_PORT=.*/NEST_PORT=$BACKEND_PORT/" "$SERVER_DIR/.env"
-  echo "  server/.env NEST_PORT=$BACKEND_PORT"
+# 检查 cloudflared 是否安装
+if [ ! -f "$CLOUDFLARED" ]; then
+  echo "错误: 未找到 cloudflared.exe"
+  echo "请从 https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/ 下载"
+  exit 1
 fi
 
-# 3. 更新前端本地配置
-sed -i "s|NEXT_PUBLIC_API_URL=.*|NEXT_PUBLIC_API_URL=http://localhost:$BACKEND_PORT/api|" .env.local
-sed -i "s|NEXT_PUBLIC_WS_URL=.*|NEXT_PUBLIC_WS_URL=http://localhost:$BACKEND_PORT|" .env.local
-echo "  client/.env.local 已更新"
+# 检查 tunnel 配置文件
+if [ ! -f "$TUNNEL_CONFIG" ]; then
+  echo "错误: 未找到 tunnel 配置文件: $TUNNEL_CONFIG"
+  exit 1
+fi
 
-# 4. 启动 Tunnel
 echo ""
-echo "[3/4] 启动 Cloudflare Tunnel → localhost:$BACKEND_PORT"
-echo "  (按 Ctrl+C 停止)"
+echo "Tunnel 名称: desocial-backend"
+echo "后端地址:    http://localhost:3002"
+echo "前端地址:    http://localhost:3000"
+echo ""
+echo "公网访问地址:"
+echo "  API:  https://api.desocial.com"
+echo "  前端: https://app.desocial.com"
+echo ""
+echo "启动 Named Tunnel (按 Ctrl+C 停止)..."
 echo ""
 
-"$CLOUDFLARED" tunnel --url "http://localhost:$BACKEND_PORT"
+# 启动 Named Tunnel
+"$CLOUDFLARED" tunnel run --config "$TUNNEL_CONFIG" desocial-backend

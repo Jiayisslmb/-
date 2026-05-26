@@ -100,8 +100,10 @@ export default function UserManagementPage() {
   };
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.username.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || 
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = user.username.toLowerCase().includes(query) ||
+                         (user.nickname && user.nickname.toLowerCase().includes(query));
+    const matchesFilter = filterStatus === 'all' ||
                          (filterStatus === 'active' && !user.isFrozen) ||
                          (filterStatus === 'frozen' && user.isFrozen);
     return matchesSearch && matchesFilter;
@@ -209,7 +211,7 @@ export default function UserManagementPage() {
                   <tr key={user.id} className="border-b border-gray-100 hover:bg-[#F0EFFF]/30 transition-colors duration-200">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <Avatar src={getIPFSUrl(user.avatarCid)} name={user.username} size="md" className="!rounded-xl ring-2 ring-gray-100" />
+                        <Avatar src={getIPFSUrl(user.avatarCid)} name={user.nickname || user.username} size="md" className="!rounded-xl ring-2 ring-gray-100" />
                         <div>
                           <div className="flex items-center gap-2">
                             <UserDisplay

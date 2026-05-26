@@ -143,13 +143,32 @@ export default function ProfileLayout({ children, activeTab }: ProfileLayoutProp
   };
 
   if (loading) {
-    return <div className="text-center py-12">加载中...</div>;
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="w-full h-48 rounded-lg skeleton mb-6" />
+        <div className="p-6 mb-6 relative -mt-16 bg-white rounded-xl shadow-sm">
+          <div className="flex items-start gap-6">
+            <div className="w-20 h-20 rounded-full skeleton flex-shrink-0" />
+            <div className="flex-1 space-y-3">
+              <div className="h-6 w-32 skeleton rounded" />
+              <div className="h-4 w-48 skeleton rounded" />
+              <div className="flex gap-8">
+                <div className="h-10 w-16 skeleton rounded" />
+                <div className="h-10 w-16 skeleton rounded" />
+                <div className="h-10 w-16 skeleton rounded" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error || !profile) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-600 mb-4">{error || '用户不存在'}</p>
+      <div className="max-w-3xl mx-auto text-center py-16">
+        <div className="text-6xl mb-4">😔</div>
+        <p className="text-gray-600 mb-6 text-lg">{error || '用户不存在'}</p>
         <Link href="/"><Button variant="primary">返回首页</Button></Link>
       </div>
     );

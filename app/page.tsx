@@ -9,19 +9,22 @@ const TrendingTopics = lazy(() => import('@/components/content/TrendingTopics'))
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col md:flex-row gap-6">
-      <div className="w-full md:w-64 shrink-0">
+    <div className="flex flex-col lg:flex-row gap-6">
+      {/* Left Sidebar - hidden on mobile, visible on lg+ */}
+      <div className="hidden lg:block w-64 shrink-0">
         <Sidebar />
       </div>
 
-      <div className="flex-1">
+      {/* Main Content Feed */}
+      <div className="flex-1 min-w-0">
         <Suspense fallback={<Loading />}>
           <ContentFeed type="recommended" />
         </Suspense>
       </div>
 
-      <div className="w-full md:w-80 shrink-0 hidden md:block">
-        <div className="sticky top-24">
+      {/* Right Sidebar - hidden on mobile, shown on md+ */}
+      <div className="hidden md:block w-full md:w-80 shrink-0">
+        <div className="sticky top-24 space-y-4">
           <Suspense fallback={<div className="animate-pulse h-64 bg-gray-100 rounded-xl" />}>
             <TrendingTopics />
           </Suspense>

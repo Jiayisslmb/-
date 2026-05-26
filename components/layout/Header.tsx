@@ -206,10 +206,10 @@ export default function Header() {
                   onClick={() => setShowDropdown(!showDropdown)}
                   className="flex items-center gap-2 p-1.5 hover:bg-gray-100 rounded-full transition-all duration-200"
                 >
-                  <Avatar 
-                    src={user?.avatar} 
-                    name={user?.username || 'User'} 
-                    size="sm" 
+                  <Avatar
+                    src={user?.avatarCid ? user.avatar : undefined}
+                    name={user?.nickname || user?.username || 'User'}
+                    size="sm"
                   />
                   <svg className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />

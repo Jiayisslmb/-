@@ -162,61 +162,42 @@ export function ProfileDetailPage() {
   const [moments, setMoments] = useState<PostData[]>([]);
   const [userId, setUserId] = useState<number | null>(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  /**
-   * 数据获取副作用钩子
-   *
-   * @effect useEffect
-   * @dependency [username]
-   * @description 当username变化时触发数据重新获取
-   *
-   * 执行流程：
-   * 1. 调用 /users/username/{username} 接口获取用户基本信息
-   * 2. 提取并保存用户ID到状态
-   * 3. 对比localStorage中的当前用户ID，判断是否为主人
-   * 4. 调用 /content/moments/user/{userId} 接口获取动态列表
-   * 5. 将动态数据保存到moments状态中
-   *
-   * 错误处理：
-   * - 用户不存在或API错误：静默失败，不显示错误提示
-   * - 动态获取失败：在控制台输出错误日志
-   *
-   * @security 安全考虑：
-   * - Token从localStorage读取，用于后续需要认证的操作
-   * - UserId同样从localStorage读取，用于判断主页归属权
-   */
   useEffect(() => {
-    /**
-     * 异步获取动态数据的内部函数
-     *
-     * @async
-     * @function fetchMoments
-     * @returns {Promise<void>}
-     */
     const fetchMoments = async () => {
       try {
-        // 步骤1：通过用户名查询用户信息
+        setLoading(true);
+        setError(null);
         const userRes = await fetch(`/api/users/username/${username}`);
-        if (!userRes.ok) return; // 用户不存在或网络错误
+        if (!userRes.ok) {
+          if (userRes.status === 404) {
+            setError('该用户不存在或已注销');
+          } else {
+            setError('加载用户信息失败');
+          }
+          return;
+        }
 
         const userData = await userRes.json();
-        setUserId(userData.id); // 保存用户ID
+        setUserId(userData.id);
 
-        // 步骤2：判断是否为本人主页
         const currentUserId = localStorage.getItem('userId');
         setIsOwnProfile(String(userData.id) === currentUserId);
 
-        // 步骤3：获取该用户的动态列表
         const momentsRes = await fetch(`/api/content/moments/user/${userData.id}`);
         if (momentsRes.ok) {
           setMoments(await momentsRes.json());
         }
       } catch (err) {
         console.error('获取动态失败:', err);
+        setError('网络错误，请稍后重试');
+      } finally {
+        setLoading(false);
       }
     };
 
-    // 仅当username有效时才发起请求
     if (username) {
       fetchMoments();
     }
@@ -294,7 +275,17 @@ export function ProfileDetailPage() {
 
   return (
     <ProfileLayout activeTab="posts">
-      {moments.length > 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6364FF]" />
+        </div>
+      ) : error ? (
+        <div className="text-center py-12">
+          <p className="text-gray-400 text-lg mb-4">😔</p>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <Link href="/"><Button variant="primary">返回首页</Button></Link>
+        </div>
+      ) : moments.length > 0 ? (
         <div className="space-y-4">
           {moments.slice(0, 5).map((moment) => {
             const author = moment.author || {

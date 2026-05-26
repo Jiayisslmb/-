@@ -6,7 +6,10 @@ import { useState, useEffect } from 'react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import Avatar from '@/components/ui/Avatar';
+import UserDisplay from '@/components/common/UserDisplay';
 import { useAuth } from '@/lib/auth';
+import { getIPFSUrl } from '@/lib/ipfs';
 import { toast } from '@/lib/toast';
 
 
@@ -19,11 +22,13 @@ interface Content {
     id: number;
     username: string;
     nickname?: string;
+    avatarCid?: string;
   };
   author?: {
     id: number;
     username: string;
     nickname?: string;
+    avatarCid?: string;
   };
   type: 'post' | 'article' | 'moment';
   createdAt: string;
@@ -239,14 +244,11 @@ export default function ContentManagementPage() {
                     {(() => {
                       const author = content.user || content.author;
                       if (!author) return <span className="text-gray-400">未知</span>;
-                      const hasNickname = author.nickname && author.nickname !== author.username;
-                      return hasNickname ? (
-                        <div>
-                          <div className="font-medium text-gray-900">{author.nickname}</div>
-                          <div className="text-xs text-gray-500">@{author.username}</div>
+                      return (
+                        <div className="flex items-center gap-3">
+                          <Avatar src={getIPFSUrl(author.avatarCid)} name={author.nickname || author.username} size="sm" className="!rounded-lg" />
+                          <UserDisplay nickname={author.nickname} username={author.username} size="sm" layout="stack" />
                         </div>
-                      ) : (
-                        <span className="font-medium text-gray-900">@{author.username}</span>
                       );
                     })()}
                   </td>

@@ -3,12 +3,14 @@ import React from 'react';
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   hoverable?: boolean;
   variant?: 'default' | 'elevated' | 'glass';
+  dense?: boolean;
   children: React.ReactNode;
 }
 
 export default function Card({
   hoverable = false,
   variant = 'default',
+  dense = false,
   className = '',
   children,
   ...props
@@ -19,13 +21,15 @@ export default function Card({
     glass: 'bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50'
   };
 
-  const hoverClasses = hoverable 
-    ? 'hover:shadow-xl hover:border-[#6364FF]/30 hover:-translate-y-1 transition-all duration-300 ease-out cursor-pointer' 
+  const hoverClasses = hoverable
+    ? 'hover:shadow-xl hover:border-[#6364FF]/30 hover:-translate-y-1 transition-all duration-300 ease-out cursor-pointer'
     : '';
+
+  const denseClasses = dense ? 'p-3' : '';
 
   return (
     <div
-      className={`${variantClasses[variant]} ${hoverClasses} ${className}`}
+      className={`${variantClasses[variant]} ${hoverClasses} ${denseClasses} ${className}`}
       {...props}
     >
       {children}

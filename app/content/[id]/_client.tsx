@@ -359,7 +359,7 @@ export function ContentDetailPage() {
             <Avatar src={getIPFSUrl(post.author.avatarCid)} name={post.author.nickname || post.author.username} size="md" />
             <div className="flex-1 min-w-0">
               <LinkWithBack href={`/profile/${post.author.username}`} className="hover:text-[#6364FF] transition-colors duration-200">
-                <span className="font-semibold text-gray-900 tracking-tight">{post.author.nickname && post.author.nickname !== post.author.username ? post.author.nickname : ''}</span>
+                <span className="font-semibold text-gray-900 tracking-tight">{post.author.nickname || post.author.username}</span>
               </LinkWithBack>
               <div className="flex items-center flex-wrap gap-1 mt-0.5">
                 <LinkWithBack href={`/profile/${post.author.username}`} className="text-gray-500 text-sm hover:text-[#6364FF] transition-colors">@{post.author.username}</LinkWithBack>
@@ -412,7 +412,7 @@ export function ContentDetailPage() {
               </div>
             </div>
           ) : (
-            <div className="text-gray-700 whitespace-pre-wrap leading-relaxed text-base">{post.content}</div>
+            <div className="text-gray-700 leading-relaxed text-base content-prose">{post.content}</div>
           )}
 
           {post.mediaCid && (

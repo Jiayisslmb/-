@@ -33,7 +33,7 @@ export default function ChatbotInput({ onSend, isLoading }: ChatbotInputProps) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="输入消息..."
+        placeholder="询问平台相关问题... (Enter发送)"
         rows={1}
         className="flex-1 resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#6364FF] focus:border-transparent"
         disabled={isLoading}

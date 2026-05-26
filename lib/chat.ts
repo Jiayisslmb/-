@@ -82,36 +82,35 @@ class ChatClient {
   private connectedCallbacks: Set<(data: { userId: number; username: string; unreadCount: number; onlineUsers: number[] }) => void> = new Set();
   private onlineUsersCallbacks: Set<OnlineUsersCallback> = new Set();
   private connectionStateCallbacks: Set<ConnectionStateCallback> = new Set();
+  private joinedConversationCallbacks: Set<(data: { otherUserId: number; otherUserOnline: boolean; otherUserLastSeen?: string }) => void> = new Set();
   
   private onlineUsers: Set<number> = new Set();
   private userStatuses: Map<number, UserStatusInfo> = new Map();
 
-  connect(token: string): Promise<{ userId: number; username: string; unreadCount: number; onlineUsers: number[] }> {
-    return new Promise((resolve, reject) => {
-      if (this.socket?.connected) {
-        resolve({ userId: 0, username: '', unreadCount: 0, onlineUsers: Array.from(this.onlineUsers) });
-        return;
-      }
+  // Promise-based connection queue to avoid setInterval polling race conditions
+  private connectionPromise: Promise<{ userId: number; username: string; unreadCount: number; onlineUsers: number[] }> | null = null;
+  private connectionResolver: ((value: { userId: number; username: string; unreadCount: number; onlineUsers: number[] }) => void) | null = null;
+  private connectionRejecter: ((reason: Error) => void) | null = null;
 
-      if (this.isConnecting) {
-        // 等待连接完成而不是拒绝
-        const checkConnection = setInterval(() => {
-          if (this.socket?.connected) {
-            clearInterval(checkConnection);
-            resolve({ userId: 0, username: '', unreadCount: 0, onlineUsers: Array.from(this.onlineUsers) });
-          } else if (!this.isConnecting) {
-            clearInterval(checkConnection);
-            reject(new Error('连接失败'));
-          }
-        }, 100);
-        return;
-      }
+  connect(token: string): Promise<{ userId: number; username: string; unreadCount: number; onlineUsers: number[] }> {
+    if (this.socket?.connected) {
+      return Promise.resolve({ userId: 0, username: '', unreadCount: 0, onlineUsers: Array.from(this.onlineUsers) });
+    }
+
+    if (this.connectionPromise) {
+      return this.connectionPromise;
+    }
+
+    this.connectionPromise = new Promise((resolve, reject) => {
+      this.connectionResolver = resolve;
+      this.connectionRejecter = reject;
 
       this.isConnecting = true;
       this.updateConnectionState();
 
-      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001';
-      // 确保WebSocket连接使用ws://协议
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || apiUrl.replace('/api', '');
+      // 确保WebSocket连接使用正确的协议
       const socketUrl = wsUrl.replace('http://', 'ws://').replace('https://', 'wss://');
       
       try {
@@ -132,16 +131,22 @@ class ChatClient {
         this.reconnectAttempts = 0;
         this.lastPing = Date.now();
         this.updateConnectionState();
-        this.startHeartbeat();
+        // Heartbeat starts after 'connected' event with server-specified interval
       });
 
-      this.socket.on('connected', (data: { userId: number; username: string; unreadCount: number; onlineUsers: number[] }) => {
+      this.socket.on('connected', (data: { userId: number; username: string; unreadCount: number; onlineUsers: number[]; heartbeatInterval?: number }) => {
         console.log('聊天服务已就绪:', data);
         if (data.onlineUsers) {
           this.onlineUsers = new Set(data.onlineUsers);
         }
+        // Sync heartbeat interval from server
+        if (data.heartbeatInterval) {
+          this.heartbeatInterval = data.heartbeatInterval;
+          this.startHeartbeat();
+        }
         this.connectedCallbacks.forEach(cb => cb(data));
-        resolve(data);
+        this.connectionResolver?.(data);
+        this.clearConnectionPromise();
       });
 
       this.socket.on('disconnect', (reason) => {
@@ -161,9 +166,10 @@ class ChatClient {
         this.reconnectAttempts++;
         this.isConnecting = false;
         this.updateConnectionState();
-        
+
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-          reject(new Error('连接失败，请刷新页面重试'));
+          this.connectionRejecter?.(new Error('连接失败，请刷新页面重试'));
+          this.clearConnectionPromise();
         }
       });
 
@@ -234,6 +240,11 @@ class ChatClient {
         this.onlineUsersCallbacks.forEach(cb => cb(userIds));
       });
 
+      this.socket.on('joined_conversation', (data: { otherUserId: number; otherUserOnline: boolean; otherUserLastSeen?: string }) => {
+        console.log('已加入对话:', data);
+        this.joinedConversationCallbacks.forEach(cb => cb(data));
+      });
+
       this.socket.on('heartbeat_ack', (data: { serverTime: number; onlineUsers?: number[] }) => {
         this.lastPing = Date.now();
         if (data.onlineUsers) {
@@ -253,9 +264,18 @@ class ChatClient {
         console.error('WebSocket初始化错误:', error);
         this.isConnecting = false;
         this.updateConnectionState();
-        reject(new Error('WebSocket连接失败'));
+        this.connectionRejecter?.(new Error('WebSocket连接失败'));
+        this.clearConnectionPromise();
       }
     });
+
+    return this.connectionPromise;
+  }
+
+  private clearConnectionPromise(): void {
+    this.connectionPromise = null;
+    this.connectionResolver = null;
+    this.connectionRejecter = null;
   }
 
   disconnect(): void {
@@ -284,6 +304,7 @@ class ChatClient {
     this.connectedCallbacks.clear();
     this.onlineUsersCallbacks.clear();
     this.connectionStateCallbacks.clear();
+    this.joinedConversationCallbacks.clear();
   }
 
   private startHeartbeat(): void {
@@ -475,6 +496,11 @@ class ChatClient {
   onConnectionStateChange(callback: ConnectionStateCallback): () => void {
     this.connectionStateCallbacks.add(callback);
     return () => this.connectionStateCallbacks.delete(callback);
+  }
+
+  onJoinedConversation(callback: (data: { otherUserId: number; otherUserOnline: boolean; otherUserLastSeen?: string }) => void): () => void {
+    this.joinedConversationCallbacks.add(callback);
+    return () => this.joinedConversationCallbacks.delete(callback);
   }
 }
 

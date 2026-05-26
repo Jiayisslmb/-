@@ -113,7 +113,7 @@ export default function ContentFeed({ type = 'recommended', userId, searchQuery,
 
   return (
     <ErrorBoundary severity="section">
-      <motion.div className="space-y-4" variants={stagger} initial="hidden" animate="visible">
+      <motion.div className="content-grid" variants={stagger} initial="hidden" animate="visible">
         <AnimatePresence mode="popLayout">
           {posts.map((post) => (
             <motion.div

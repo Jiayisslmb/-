@@ -5,6 +5,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Avatar from '@/components/ui/Avatar';
+import UserDisplay from '@/components/common/UserDisplay';
 import { getIPFSUrl } from '@/lib/ipfs';
 import { toast } from '@/lib/toast';
 
@@ -20,6 +21,7 @@ interface Report {
   reporter?: {
     id: number;
     username: string;
+    nickname?: string;
     avatarCid?: string;
   };
   createdAt: string;
@@ -231,8 +233,8 @@ export default function FeedbackPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <Avatar src={getIPFSUrl(report.reporter?.avatarCid)} name={report.reporter?.username || '?'} size="sm" className="!rounded-lg" />
-                        <span className="font-medium text-gray-700">@{report.reporter?.username || '未知'}</span>
+                        <Avatar src={getIPFSUrl(report.reporter?.avatarCid)} name={report.reporter?.nickname || report.reporter?.username || '?'} size="sm" className="!rounded-lg" />
+                        <UserDisplay nickname={report.reporter?.nickname} username={report.reporter?.username || '未知'} size="sm" layout="stack" />
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -330,8 +332,8 @@ export default function FeedbackPage() {
                 <div>
                   <label className="text-sm text-gray-500 font-medium">举报人</label>
                   <div className="flex items-center gap-3 mt-1">
-                    <Avatar src={getIPFSUrl(selectedReport.reporter?.avatarCid)} name={selectedReport.reporter?.username || '?'} size="md" className="!rounded-xl" />
-                    <span className="font-semibold text-gray-900">@{selectedReport.reporter?.username || '未知'}</span>
+                    <Avatar src={getIPFSUrl(selectedReport.reporter?.avatarCid)} name={selectedReport.reporter?.nickname || selectedReport.reporter?.username || '?'} size="md" className="!rounded-xl" />
+                    <UserDisplay nickname={selectedReport.reporter?.nickname} username={selectedReport.reporter?.username || '未知'} size="md" layout="stack" />
                   </div>
                 </div>
 

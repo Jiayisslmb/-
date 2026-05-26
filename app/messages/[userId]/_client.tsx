@@ -229,6 +229,15 @@ export function ChatPage() {
       }
     });
 
+    const unsubJoined = chatClient.onJoinedConversation((data) => {
+      if (data.otherUserId === parseInt(otherUserId)) {
+        // 使用服务器返回的初始在线状态
+        if (typeof data.otherUserOnline === 'boolean') {
+          // useOnlineStatus hook will pick this up via user_status event
+        }
+      }
+    });
+
     const unsubError = chatClient.onError((err) => {
       setError(err.message);
       if (err.tempId) {
@@ -250,6 +259,7 @@ export function ChatPage() {
       unsubSent();
       unsubTyping();
       unsubStatus();
+      unsubJoined();
       unsubError();
       unsubConnection();
       chatClient.leaveConversation(parseInt(otherUserId));
@@ -381,6 +391,11 @@ export function ChatPage() {
           };
           setMessages(prev => [...prev, formattedMessage]);
         } else {
+          if (response.status === 403) {
+            throw new Error('您已被对方拉黑，无法发送消息');
+          } else if (response.status === 404) {
+            throw new Error('该用户不存在或已注销');
+          }
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.message || '发送失败');
         }

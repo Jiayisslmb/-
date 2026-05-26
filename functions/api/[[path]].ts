@@ -2,9 +2,9 @@
 // UPDATE API_BASE when switching from Quick Tunnel to Named Tunnel DNS:
 //   Current (Quick Tunnel): https://matched-poems-cancelled-stations.trycloudflare.com/api
 //   After DNS propagation: https://api.desocial.com (Named Tunnel permanent endpoint)
-const API_BASE = 'https://matched-poems-cancelled-stations.trycloudflare.com/api';
+const API_BASE = 'https://commerce-liabilities-benchmark-advances.trycloudflare.com/api';
 
-export async function onRequest(context) {
+export async function onRequest(context: { request: Request; params: Record<string, string> }) {
   const { request } = context;
   const url = new URL(request.url);
   const path = url.pathname.replace(/^\/api/, '') || '/';
