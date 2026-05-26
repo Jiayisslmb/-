@@ -6,19 +6,9 @@ const API_URL =
   "http://localhost:3002/api";
 
 const nextConfig: NextConfig = {
+  output: 'export',
   images: { unoptimized: true },
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${API_URL}/:path*`,
-      },
-      {
-        source: '/socket.io/:path*',
-        destination: `${API_URL.replace('/api', '')}/socket.io/:path*`,
-      },
-    ];
-  },
+  // API calls proxied through Pages Function (functions/api/[[path]].ts)
 };
 
 export default nextConfig;
