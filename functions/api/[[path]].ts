@@ -1,11 +1,11 @@
 // API Proxy — forwards /api/* to backend
-// Named Tunnel permanent endpoint:
-const API_BASE = 'https://api.desocial.com';
+// QUICK TUNNEL (temporary — replace with 'https://api.desocial.com' once SSL is provisioned):
+const API_BASE = 'https://hebrew-royalty-assign-action.trycloudflare.com';
 
 export async function onRequest(context: { request: Request; params: Record<string, string> }) {
   const { request } = context;
   const url = new URL(request.url);
-  const path = url.pathname.replace(/^\/api/, '') || '/';
+  const path = url.pathname;
   const target = `${API_BASE}${path}${url.search}`;
 
   try {
