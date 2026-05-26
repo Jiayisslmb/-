@@ -48,8 +48,8 @@ export default function ChatbotButton() {
         const btnW = 56;
         const btnH = 56;
 
-        const newX = Math.max(0, Math.min(viewportW - btnW, dragRef.current.startLeft + dx));
-        const newY = Math.max(0, Math.min(viewportH - btnH, dragRef.current.startTop + dy));
+        const newX = Math.max(0, Math.min(viewportW - btnW, dragRef.current.startLeft - dx));
+        const newY = Math.max(0, Math.min(viewportH - btnH, dragRef.current.startTop - dy));
 
         setPosition({ x: newX, y: newY });
       }
@@ -95,8 +95,8 @@ export default function ChatbotButton() {
         const btnW = 56;
         const btnH = 56;
 
-        const newX = Math.max(0, Math.min(viewportW - btnW, dragRef.current.startLeft + dx));
-        const newY = Math.max(0, Math.min(viewportH - btnH, dragRef.current.startTop + dy));
+        const newX = Math.max(0, Math.min(viewportW - btnW, dragRef.current.startLeft - dx));
+        const newY = Math.max(0, Math.min(viewportH - btnH, dragRef.current.startTop - dy));
 
         setPosition({ x: newX, y: newY });
       }
