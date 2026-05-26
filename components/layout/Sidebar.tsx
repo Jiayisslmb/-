@@ -51,8 +51,14 @@ export default function Sidebar() {
             fetch(`/api/users/${user.id}/following`, { headers: { Authorization: `Bearer ${token}` } }),
             fetch(`/api/users/${user.id}/followers`, { headers: { Authorization: `Bearer ${token}` } }),
           ]);
-          if (followingRes.ok) setStats(prev => ({ ...prev, following: (await followingRes.json()).length || 0 }));
-          if (followersRes.ok) setStats(prev => ({ ...prev, followers: (await followersRes.json()).length || 0 }));
+          if (followingRes.ok) {
+            const data = await followingRes.json();
+            setStats(prev => ({ ...prev, following: (Array.isArray(data) ? data.length : 0) }));
+          }
+          if (followersRes.ok) {
+            const data = await followersRes.json();
+            setStats(prev => ({ ...prev, followers: (Array.isArray(data) ? data.length : 0) }));
+          }
         } catch {}
       }
     };
