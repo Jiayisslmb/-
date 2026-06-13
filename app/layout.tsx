@@ -7,6 +7,7 @@ import BottomNav from '@/components/layout/BottomNav';
 import GlobalBackground from '@/components/layout/GlobalBackground';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import BackendStatusBanner from '@/components/common/BackendStatusBanner';
+import ConnectionStatusWrapper from '@/components/common/ConnectionStatusWrapper';
 import { AuthProvider } from '@/lib/auth';
 import { IPFSProvider } from '@/lib/ipfs';
 import { PreferencesProvider } from '@/lib/preferences';
@@ -45,6 +46,7 @@ export default function RootLayout({
                     <Footer />
                     <BottomNav />
                     <ChatbotButton />
+                    <ConnectionStatusWrapper />
                   </ChatbotProvider>
                 </PreferencesProvider>
               </P2PProvider>

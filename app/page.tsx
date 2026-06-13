@@ -4,12 +4,17 @@ import { Suspense, lazy } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import ContentFeed from '@/components/content/ContentFeed';
 import Loading from './loading';
+import GitHubAuthCallback from '@/components/auth/GitHubAuthCallback';
 
 const TrendingTopics = lazy(() => import('@/components/content/TrendingTopics'));
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
+    <>
+      <Suspense fallback={null}>
+        <GitHubAuthCallback />
+      </Suspense>
+      <div className="flex flex-col lg:flex-row gap-6">
       {/* Left Sidebar - hidden on mobile, visible on lg+ */}
       <div className="hidden lg:block w-64 shrink-0">
         <Sidebar />
@@ -31,5 +36,6 @@ export default function HomePage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -44,7 +44,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
@@ -52,6 +52,7 @@ import { loginSchema, validateSchema } from '@/lib/validation';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Card from '@/components/ui/Card';
+import GitHubLoginButton from '@/components/auth/GitHubLoginButton';
 
 /**
  * 登录页面主组件
@@ -76,15 +77,17 @@ export default function SignInPage() {
    * @description 用于编程式导航，登录成功后跳转到首页
    */
   const router = useRouter();
-
-  /**
-   * 认证上下文中的login方法
-   *
-   * @constant {Function} login
-   * @description 从useAuth钩子解构出的登录方法
-   * 内部实现：调用后端API → 获取JWT Token → 存储到localStorage
-   */
   const { login } = useAuth();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    if (error === 'github_auth_failed') {
+      setErrors({ submit: 'GitHub 登录失败，请重试或使用用户名密码登录' });
+    } else if (error === 'account_frozen') {
+      setErrors({ submit: '该账号已被冻结，请联系管理员' });
+    }
+  }, []);
 
   /**
    * 本地状态定义
@@ -316,6 +319,20 @@ export default function SignInPage() {
               登录
             </Button>
           </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-3 bg-white text-gray-400">或</span>
+              </div>
+            </div>
+            <div className="mt-4">
+              <GitHubLoginButton />
+            </div>
+          </div>
 
           <div className="mt-8 pt-6 border-t border-gray-100 text-center space-y-4">
             <p className="text-sm text-gray-600">

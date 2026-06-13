@@ -8,6 +8,7 @@ import { registerSchema, validateSchema } from '@/lib/validation';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Card from '@/components/ui/Card';
+import GitHubLoginButton from '@/components/auth/GitHubLoginButton';
 
 
 export default function SignUpPage() {
@@ -251,6 +252,20 @@ export default function SignUpPage() {
               创建账户
             </Button>
           </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-3 bg-white text-gray-400">或</span>
+              </div>
+            </div>
+            <div className="mt-4">
+              <GitHubLoginButton />
+            </div>
+          </div>
 
           <div className="mt-8 pt-6 border-t border-gray-100 text-center space-y-4">
             <p className="text-sm text-gray-600">

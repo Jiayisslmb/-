@@ -1,7 +1,10 @@
 // 统一 HTTP 客户端 — 所有前端 fetch 请求的唯一入口
 
-// 使用相对路径，通过 Next.js rewrites 代理到后端
-const API_BASE = '/api';
+// 开发模式使用环境变量直连后端，生产模式（Pages）使用相对路径经过 Pages Function 代理
+const API_BASE =
+  typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL
+    : '/api';
 
 class ApiError extends Error {
   status: number;

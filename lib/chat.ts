@@ -130,6 +130,7 @@ class ChatClient {
         this.isConnecting = false;
         this.reconnectAttempts = 0;
         this.lastPing = Date.now();
+        this.flushPendingMessages();
         this.updateConnectionState();
         // Heartbeat starts after 'connected' event with server-specified interval
       });
@@ -176,6 +177,7 @@ class ChatClient {
       this.socket.on('reconnect', (attemptNumber) => {
         console.log('WebSocket 重新连接成功，尝试次数:', attemptNumber);
         this.reconnectAttempts = 0;
+        this.flushPendingMessages();
         this.updateConnectionState();
       });
 
@@ -281,6 +283,7 @@ class ChatClient {
   disconnect(): void {
     this.stopHeartbeat();
     if (this.socket) {
+      this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
       this.isConnected = false;
@@ -361,12 +364,13 @@ class ChatClient {
   }
 
   sendMessage(receiverId: number, content: string, mediaCid?: string): string {
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
     if (!this.socket?.connected) {
-      throw new Error('WebSocket 未连接');
+      this.addPendingMessage(receiverId, content, tempId, mediaCid);
+      return tempId;
     }
 
-    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
     try {
       this.socket.emit('send_message', {
         receiverId,
@@ -376,10 +380,45 @@ class ChatClient {
       });
     } catch (error) {
       console.error('发送消息失败:', error);
-      throw new Error('发送消息失败');
+      this.addPendingMessage(receiverId, content, tempId, mediaCid);
     }
 
     return tempId;
+  }
+
+  // Message retry queue
+  private pendingMessages: Array<{ receiverId: number; content: string; mediaCid?: string; tempId: string; retries: number }> = [];
+  private maxRetries = 3;
+
+  private flushPendingMessages(): void {
+    if (!this.socket?.connected) return;
+
+    const messages = [...this.pendingMessages];
+    this.pendingMessages = [];
+
+    for (const msg of messages) {
+      if (msg.retries >= this.maxRetries) {
+        this.errorCallbacks.forEach(cb => cb({ message: '消息发送失败，已达最大重试次数', tempId: msg.tempId }));
+        continue;
+      }
+      try {
+        this.socket.emit('send_message', {
+          receiverId: msg.receiverId,
+          content: msg.content,
+          mediaCid: msg.mediaCid,
+          tempId: msg.tempId,
+        });
+      } catch {
+        this.pendingMessages.push({ ...msg, retries: msg.retries + 1 });
+      }
+    }
+  }
+
+  private addPendingMessage(receiverId: number, content: string, tempId: string, mediaCid?: string): void {
+    this.pendingMessages.push({ receiverId, content, mediaCid, tempId, retries: 0 });
+    if (this.pendingMessages.length > 100) {
+      this.pendingMessages.shift();
+    }
   }
 
   sendTypingIndicator(receiverId: number, isTyping: boolean): void {
