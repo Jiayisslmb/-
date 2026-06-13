@@ -2,7 +2,10 @@ const TUNNEL_URL = process.env.BACKEND_TUNNEL_URL || 'http://localhost:3002';
 
 async function handler(request: Request) {
   const url = new URL(request.url);
-  const target = `${TUNNEL_URL}${url.pathname}${url.search}`;
+  const pathname = (url.pathname === '/api/socket.io' && url.search.includes('EIO='))
+    ? '/api/socket.io/'
+    : url.pathname;
+  const target = `${TUNNEL_URL}${pathname}${url.search}`;
 
   try {
     const response = await fetch(target, {
