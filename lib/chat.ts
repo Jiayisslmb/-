@@ -111,7 +111,10 @@ class ChatClient {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
       const isRelative = apiUrl.startsWith('/');
       const socketNamespace = '/api/chat';
-      const socketUrl = isRelative ? socketNamespace : `${apiUrl.replace('/api', '')}${socketNamespace}`;
+      // 生产环境直连 api.desocial.top 绕过 Cloudflare 代理（避免 socket.io 路径被拦截）
+      const socketUrl = isRelative
+        ? `https://api.desocial.top${socketNamespace}`
+        : `${apiUrl.replace('/api', '')}${socketNamespace}`;
 
       try {
         this.socket = io(socketUrl, {
