@@ -1,6 +1,6 @@
 // API Proxy — forwards /api/* to backend via localhost.run tunnel
 // Run ./启动隧道-lhr.sh to start the tunnel, then update this URL.
-const API_BASE = 'https://d3c71e1fe320a0.lhr.life';
+const API_BASE = 'https://709a4dec27dcb8.lhr.life';
 
 export async function onRequest(context: { request: Request; params: Record<string, string> }) {
   const { request } = context;

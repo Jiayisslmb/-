@@ -109,14 +109,15 @@ class ChatClient {
       this.updateConnectionState();
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
-      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || apiUrl.replace('/api', '');
-      // 确保WebSocket连接使用正确的协议
-      const socketUrl = wsUrl.replace('http://', 'ws://').replace('https://', 'wss://');
-      
+      // 生产环境 (/api) 走 Pages Function 代理，开发环境直连后端
+      const isRelative = apiUrl.startsWith('/');
+      const socketPath = isRelative ? '/api/chat' : `${apiUrl.replace('/api', '')}/chat`;
+
       try {
-        this.socket = io(`${socketUrl}/chat`, {
+        this.socket = io(socketPath, {
           auth: { token },
-          transports: ['websocket', 'polling'],
+          // 仅使用 HTTP 长轮询 — Cloudflare Pages Functions 不支持 WebSocket 升级
+          transports: ['polling'],
           reconnection: true,
           reconnectionAttempts: this.maxReconnectAttempts,
           reconnectionDelay: this.reconnectDelay,
