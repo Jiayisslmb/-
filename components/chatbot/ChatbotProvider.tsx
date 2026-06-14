@@ -179,14 +179,16 @@ export function ChatbotProvider({ children }: { children: ReactNode }) {
       await sendMessage(
         [{ role: 'user', content: text || '[图片]', ...(imageBase64 ? { imageUrl: imageBase64 } : {}) }],
         (chunk) => {
-          // Detect conversationId from server auto-creation
-          try {
-            const parsed = JSON.parse(chunk);
-            if (parsed.conversationId && !activeConversationId) {
-              setActiveConversationId(parsed.conversationId);
-              return; // meta chunk, not display content
-            }
-          } catch {}
+          // Detect conversationId from server auto-creation (sent as JSON)
+          if (chunk.startsWith('{') && chunk.includes('"conversationId"')) {
+            try {
+              const parsed = JSON.parse(chunk);
+              if (parsed.conversationId && !activeConversationId) {
+                setActiveConversationId(parsed.conversationId);
+              }
+            } catch {}
+            return; // meta chunk, never display
+          }
           fullContent += chunk;
           setMessages(prev => prev.map(m =>
             m.id === assistantMsg.id ? { ...m, content: fullContent } : m
