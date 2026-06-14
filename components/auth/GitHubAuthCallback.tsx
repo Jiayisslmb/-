@@ -58,6 +58,11 @@ export default function GitHubAuthCallback() {
           router.replace('/');
         } catch (err) {
           console.error('GitHub OAuth exchange failed:', err);
+          // 如果已有 token 说明第一次交换成功（React 双重渲染导致第二次失败）
+          if (localStorage.getItem('token')) {
+            router.replace('/');
+            return;
+          }
           alert('GitHub 登录失败，请重试');
           router.replace('/auth/sign-in');
         }
