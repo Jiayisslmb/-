@@ -15,8 +15,8 @@ export default function HomePage() {
         <GitHubAuthCallback />
       </Suspense>
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-      {/* Left Sidebar - visible on md+ (平板起显示圈子等板块) */}
-      <div className="hidden md:block w-56 lg:w-64 shrink-0">
+      {/* Left Sidebar - visible on lg+ */}
+      <div className="hidden lg:block w-64 shrink-0">
         <Sidebar />
       </div>
 
