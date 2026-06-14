@@ -139,10 +139,10 @@ export function ChatbotProvider({ children }: { children: ReactNode }) {
             resolve(dataUrl);
             return;
           }
-          // Compress large images to max 1024px on longest side
+          // Compress large images to max 800px, JPEG quality 0.8
           const img = new Image();
           img.onload = () => {
-            const maxDim = 1024;
+            const maxDim = 800;
             let w = img.width, h = img.height;
             if (w > maxDim || h > maxDim) {
               if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
@@ -151,7 +151,7 @@ export function ChatbotProvider({ children }: { children: ReactNode }) {
             const canvas = document.createElement('canvas');
             canvas.width = w; canvas.height = h;
             canvas.getContext('2d')?.drawImage(img, 0, 0, w, h);
-            resolve(canvas.toDataURL('image/jpeg', 0.7));
+            resolve(canvas.toDataURL('image/jpeg', 0.8));
           };
           img.src = dataUrl;
         };
