@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useChatbot } from './ChatbotProvider';
 import ChatbotMessage from './ChatbotMessage';
 import ChatbotInput from './ChatbotInput';
@@ -9,11 +9,12 @@ export default function ChatbotPanel() {
   const {
     messages, isLoading, tokenUsage,
     conversations, activeConversationId, mode,
-    clearMessages, createNewConversation,
+    togglePanel, clearMessages, createNewConversation,
     switchConversation, deleteConversation,
     setMode,
   } = useChatbot();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -30,10 +31,20 @@ export default function ChatbotPanel() {
   ];
 
   return (
-    <div className="flex flex-col max-h-[550px] rounded-2xl border border-gray-200 shadow-lg bg-white overflow-hidden">
+    <div className="flex flex-col h-full rounded-2xl border border-gray-200 shadow-lg bg-white overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white shrink-0">
         <div className="flex items-center gap-2">
+          {/* Sidebar toggle */}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500 transition shrink-0"
+            title={sidebarOpen ? '收起对话列表' : '展开对话列表'}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
           <div className="w-8 h-8 rounded-full bg-[#6364FF] flex items-center justify-center text-white text-sm font-bold">
             AI
           </div>
@@ -43,10 +54,10 @@ export default function ChatbotPanel() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {/* Token usage indicator */}
           <div className="hidden sm:flex items-center gap-1.5" title={`Token 用量: ${tokenUsage.estimated}/${tokenUsage.max}`}>
-            <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <div className="w-12 h-1 bg-gray-200 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-300 ${
                   usagePercent > 80 ? 'bg-red-500' : usagePercent > 50 ? 'bg-yellow-500' : 'bg-green-500'
@@ -54,9 +65,6 @@ export default function ChatbotPanel() {
                 style={{ width: `${usagePercent}%` }}
               />
             </div>
-            <span className={`text-xs ${usagePercent > 80 ? 'text-red-500' : 'text-gray-400'}`}>
-              {usagePercent}%
-            </span>
           </div>
 
           {/* Mode toggle pills */}
@@ -82,13 +90,21 @@ export default function ChatbotPanel() {
           >
             清空
           </button>
+
+          {/* Close button */}
+          <button
+            onClick={togglePanel}
+            className="w-6 h-6 rounded-full bg-gray-200 text-gray-500 hover:bg-gray-300 flex items-center justify-center text-xs shrink-0"
+          >
+            ✕
+          </button>
         </div>
       </div>
 
       {/* Body */}
       <div className="flex flex-row flex-1 min-h-0">
-        {/* Left sidebar */}
-        <div className="w-44 border-r border-gray-200 flex flex-col shrink-0 bg-gray-50">
+        {/* Left sidebar — collapsible */}
+        <div className={`${sidebarOpen ? 'w-44' : 'w-0'} border-r border-gray-200 flex flex-col shrink-0 bg-gray-50 transition-all duration-200 overflow-hidden`}>
           <div className="p-2">
             <button
               onClick={createNewConversation}

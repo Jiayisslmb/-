@@ -140,13 +140,7 @@ export default function ChatbotButton() {
 
       {/* Chat panel */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-3rem)] h-[560px] max-h-[calc(100vh-6rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
-          <button
-            onClick={togglePanel}
-            className="absolute top-3 right-3 z-10 w-7 h-7 rounded-full bg-gray-200 text-gray-500 hover:bg-gray-300 flex items-center justify-center text-sm"
-          >
-            ✕
-          </button>
+        <div className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-3rem)] h-[560px] max-h-[calc(100vh-6rem)] rounded-2xl shadow-2xl flex flex-col animate-in slide-in-from-bottom-4 duration-200">
           <ChatbotPanel />
         </div>
       )}
