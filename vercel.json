@@ -5,10 +5,6 @@
   "outputDirectory": ".next",
   "rewrites": [
     {
-      "source": "/api/socket.io?(:query*)",
-      "destination": "https://api.desocial.top/api/socket.io/?$1"
-    },
-    {
       "source": "/api/:path*",
       "destination": "https://api.desocial.top/api/:path*"
     }
