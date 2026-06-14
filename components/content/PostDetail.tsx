@@ -12,6 +12,7 @@ import { formatDate, formatNumber } from '@/lib/utils';
 import { getIPFSUrl } from '@/lib/ipfs';
 import { toast } from '@/lib/toast';
 import ReportModal from '@/components/common/ReportModal';
+import { updateMoment, updateArticle } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -105,6 +106,7 @@ export default function PostDetail({ post, type, onLike, onDelete, onRepost }: P
 
   // ── Menu state ──
   const [showMenu, setShowMenu] = useState(false);
+  const [showVisibilityMenu, setShowVisibilityMenu] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showShareOptions, setShowShareOptions] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -233,6 +235,26 @@ export default function PostDetail({ post, type, onLike, onDelete, onRepost }: P
       if (res.ok) { onDelete?.(post.id); setShowMenu(false); router.refresh(); }
       else { const e = await res.json(); toast.error(e.message || '删除失败'); }
     } catch { toast.error('删除失败，请重试'); }
+  };
+
+  const handleChangeVisibility = async (newVisibility: string) => {
+    if (!isAuthenticated) {
+      toast.info('请先登录');
+      return;
+    }
+
+    try {
+      if (isArticle) {
+        await updateArticle(post.id, { visibility: newVisibility } as any);
+      } else {
+        await updateMoment(post.id, { visibility: newVisibility } as any);
+      }
+      setShowVisibilityMenu(false);
+      router.refresh();
+    } catch (err) {
+      console.error('修改可见性失败:', err);
+      toast.error('修改可见性失败，请重试');
+    }
   };
 
   // ── Comments state ──
@@ -390,9 +412,26 @@ export default function PostDetail({ post, type, onLike, onDelete, onRepost }: P
             {showMenu && (
               <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[150px] z-10">
                 {isAuthenticated && String(user?.id) === String(post.author.id) ? (
-                  <button onClick={handleDelete} className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600">
-                    删除
-                  </button>
+                  <>
+                    <div
+                      className="relative px-4 py-2 text-left text-sm hover:bg-gray-50 cursor-pointer flex items-center justify-between"
+                      onMouseEnter={() => setShowVisibilityMenu(true)}
+                      onMouseLeave={() => setShowVisibilityMenu(false)}
+                    >
+                      <span>修改可见性</span>
+                      <span className="text-gray-400">▸</span>
+                      {showVisibilityMenu && (
+                        <div className="absolute left-full top-0 ml-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[180px] z-20">
+                          <button onClick={() => { handleChangeVisibility('public'); setShowMenu(false); setShowVisibilityMenu(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">🌐 公开</button>
+                          <button onClick={() => { handleChangeVisibility('followers'); setShowMenu(false); setShowVisibilityMenu(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">👥 仅关注者</button>
+                          <button onClick={() => { handleChangeVisibility('private'); setShowMenu(false); setShowVisibilityMenu(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">🔒 私密</button>
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={handleDelete} className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600">
+                      删除
+                    </button>
+                  </>
                 ) : (
                   <button onClick={() => { setShowReportModal(true); setShowMenu(false); }}
                     className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600">
@@ -423,17 +462,15 @@ export default function PostDetail({ post, type, onLike, onDelete, onRepost }: P
                       .replace('转发动态\n「', '').replace('」', '')
                       .trim()}
                   </p>
-                  <a
-                    href={post.content.match(/原文链接: (.*)/)?.[1] || '#'}
+                  <LinkWithBack
+                    href={post.content.match(/原文链接: (.*)/)?.[1]?.trim() || '#'}
                     className="text-[#6364FF] text-xs font-medium mt-2 inline-flex items-center gap-1 hover:underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
                     查看原文
-                  </a>
+                  </LinkWithBack>
                 </>
               ) : (
                 <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">

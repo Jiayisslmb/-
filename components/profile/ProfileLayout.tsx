@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect, ReactNode } from 'react';
+import { useEffect, ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import useSWR, { mutate } from 'swr';
+import { request } from '@/lib/fetch-client';
 import { useAuth } from '@/lib/auth';
 import { getIPFSUrl } from '@/lib/ipfs';
 import Button from '@/components/ui/Button';
@@ -55,63 +57,49 @@ export default function ProfileLayout({ children, activeTab, hideTabs }: Profile
   const { user: currentUser } = useAuth();
   const username = params.username as string;
 
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [stats, setStats] = useState<UserStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
+  // SWR data fetching with automatic caching and revalidation
+  const { data: userData, isLoading: userLoading, error: userError } = useSWR(
+    username ? `/users/username/${username}` : null,
+    (url) => request<any>(url)
+  );
 
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/users/username/${username}?t=${Date.now()}`);
-      if (!res.ok) throw new Error('用户不存在');
-      const data = await res.json();
-      setProfile(data);
+  const userId = userData?.id;
 
-      const statsRes = await fetch(`/api/users/stats/${data.id}`);
-      if (statsRes.ok) {
-        setStats(await statsRes.json());
-      }
+  const { data: statsData } = useSWR(
+    userId ? `/users/stats/${userId}` : null,
+    (url) => request<any>(url)
+  );
 
-      if (currentUser) {
-        const followRes = await fetch(
-          `/api/users/${data.id}/is-following`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('token')}`,
-            },
-          }
-        );
-        if (followRes.ok) {
-          const followData = await followRes.json();
-          setIsFollowing(followData.isFollowing);
-        }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '加载失败');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: followData, mutate: mutateFollow } = useSWR(
+    userId ? `/users/${userId}/is-following` : null,
+    (url) => request<any>(url)
+  );
 
-  useEffect(() => {
-    if (username) {
-      fetchProfile();
-    }
-  }, [username, currentUser, refreshKey]);
+  const { data: blockData } = useSWR(
+    userId ? `/users/${userId}/is-blocked` : null,
+    (url) => request<any>(url)
+  );
 
+  const profile = userData || null;
+  const stats = statsData || null;
+  const loading = userLoading;
+  const error = userError ? (userError instanceof Error ? userError.message : '加载失败') : null;
+  const isFollowing = followData?.isFollowing || false;
+
+  // Use SWR mutate() for cache invalidation on profile updates
   useEffect(() => {
     const handleProfileUpdate = () => {
-      setRefreshKey(prev => prev + 1);
+      mutate(`/users/username/${username}`);
+      if (userId) {
+        mutate(`/users/stats/${userId}`);
+      }
     };
-    
+
     window.addEventListener('profileUpdated', handleProfileUpdate);
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
-  }, []);
+  }, [username, userId]);
 
   const handleFollow = async () => {
     if (!profile) return;
@@ -124,12 +112,9 @@ export default function ProfileLayout({ children, activeTab, hideTabs }: Profile
         },
       });
       if (res.ok) {
-        setIsFollowing(!isFollowing);
-        if (stats) {
-          setStats({
-            ...stats,
-            followerCount: isFollowing ? stats.followerCount - 1 : stats.followerCount + 1,
-          });
+        mutateFollow();
+        if (userId) {
+          mutate(`/users/stats/${userId}`);
         }
       }
     } catch (err) {
@@ -198,7 +183,7 @@ export default function ProfileLayout({ children, activeTab, hideTabs }: Profile
             src={getIPFSUrl(profile.backgroundCid)}
             alt="封面"
             className="absolute inset-0 w-full h-full object-cover"
-            key={refreshKey}
+            key={profile.backgroundCid}
             onLoad={(e) => {
               e.currentTarget.style.opacity = '1';
             }}

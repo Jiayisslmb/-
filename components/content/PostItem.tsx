@@ -82,6 +82,16 @@ import type { PostDTO, Visibility, PostType } from '@/types';
 import { toast } from '@/lib/toast';
 export type { PostDTO as Post, Visibility, PostType } from '@/types';
 
+function stripMarkdown(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/`(.+?)`/g, '$1')
+    .replace(/^#{1,6}\s/gm, '')
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1');
+}
+
 type Post = PostDTO;
 
 /**
@@ -548,7 +558,12 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
           <div className="mb-3 p-3 bg-gray-50 border border-gray-100 rounded-xl">
             <div className="text-xs text-gray-400 mb-1.5">转发内容</div>
             <LinkWithBack
-              href={hasOriginalLink ? (post.content.match(/原文链接: (.*)/)?.[1] || '#') : `/content/${isArticle ? 'article' : 'moment'}/${post.id}`}
+              href={(() => {
+                const rawUrl = post.content.match(/原文链接: (.*)/)?.[1]?.trim();
+                if (!rawUrl) return '#';
+                // Handle both absolute (http...) and relative (/content/...) URLs
+                return rawUrl.startsWith('http') ? rawUrl : rawUrl;
+              })()}
               className="block"
             >
               <p className="text-sm text-gray-700 line-clamp-3 leading-relaxed">
@@ -559,7 +574,7 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
         ) : (
           <LinkWithBack href={`/content/${isArticle ? 'article' : 'moment'}/${post.id}`} className="block group mb-2">
             <p className={`text-sm text-gray-700 leading-relaxed group-hover:text-gray-900 transition-colors ${contentExpanded ? '' : 'line-clamp-3'}`}>
-              {post.content}
+              {stripMarkdown(post.content)}
             </p>
             {post.content && post.content.length > 200 && (
               <button
@@ -611,7 +626,7 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
             isLiked ? 'text-red-500 bg-red-50' : 'hover:text-red-500 hover:bg-red-50'
           }`}
         >
-          <svg className={`w-4.5 h-4.5 ${isLiked ? 'fill-current' : ''}`} fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+          <svg className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
           <span>{formatNumber(likes)}</span>
@@ -621,7 +636,7 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
           href={`/content/${isArticle ? 'article' : 'moment'}/${post.id}`}
           className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:text-[#6364FF] hover:bg-[#F0EFFF] transition-all duration-200 text-sm font-medium"
         >
-          <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
           <span>{formatNumber(post.comments)}</span>
@@ -633,7 +648,7 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
               onClick={handleShare}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:text-green-600 hover:bg-green-50 transition-all duration-200 text-sm font-medium"
             >
-              <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
               <span>{formatNumber(shares)}</span>
@@ -657,7 +672,7 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
             isCollected ? 'text-yellow-500 bg-yellow-50' : 'hover:text-yellow-600 hover:bg-yellow-50'
           }`}
         >
-          <svg className={`w-4.5 h-4.5 ${isCollected ? 'fill-current' : ''}`} fill={isCollected ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+          <svg className={`w-5 h-5 ${isCollected ? 'fill-current' : ''}`} fill={isCollected ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
           </svg>
         </button>

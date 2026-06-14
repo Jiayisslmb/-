@@ -3,11 +3,14 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
+import useSWR from 'swr';
+import { request } from '@/lib/fetch-client';
 import PostItem from '@/components/content/PostItem';
 import ProfileLayout from '@/components/profile/ProfileLayout';
 import { getIPFSUrl } from '@/lib/ipfs';
+import { useUserByUsername } from '@/lib/swr-config';
 
 
 interface PostData {
@@ -38,41 +41,39 @@ export function UserCollectionsPage() {
   const params = useParams();
   const username = params.username as string;
 
-  const [posts, setPosts] = useState<PostData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: userData } = useUserByUsername(username);
+  const userId = userData?.id;
 
-  useEffect(() => {
-    const fetchUserCollections = async () => {
-      try {
-        const userRes = await fetch(`/api/users/username/${username}`);
-        if (!userRes.ok) throw new Error('用户不存在');
-        const userData = await userRes.json();
+  const {
+    data: articleCollections = [],
+    isLoading: articleLoading,
+    mutate: mutateArticleCollections,
+  } = useSWR(
+    userId ? `/content/articles/user/${userId}/collections` : null,
+    (url) => request<any[]>(url)
+  );
 
-        const [articleCollections, momentCollections] = await Promise.all([
-          fetch(`/api/content/articles/user/${userData.id}/collections`).then(r => r.ok ? r.json() : []),
-          fetch(`/api/content/moments/user/${userData.id}/collections`).then(r => r.ok ? r.json() : []),
-        ]);
+  const {
+    data: momentCollections = [],
+    isLoading: momentLoading,
+    mutate: mutateMomentCollections,
+  } = useSWR(
+    userId ? `/content/moments/user/${userId}/collections` : null,
+    (url) => request<any[]>(url)
+  );
 
-        const allCollections = [
-          ...(Array.isArray(articleCollections) ? articleCollections : []).map((p: PostData) => ({ ...p, _type: 'article' as const })),
-          ...(Array.isArray(momentCollections) ? momentCollections : []).map((p: PostData) => ({ ...p, _type: 'moment' as const })),
-        ];
+  const isLoading = !userId || articleLoading || momentLoading;
 
-        allCollections.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setPosts(allCollections);
-      } catch (err) {
-        console.error('获取收藏内容失败:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const posts = useMemo(() => {
+    const allCollections = [
+      ...articleCollections.map((p: any) => ({ ...p, _type: 'article' as const })),
+      ...momentCollections.map((p: any) => ({ ...p, _type: 'moment' as const })),
+    ];
+    allCollections.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return allCollections;
+  }, [articleCollections, momentCollections]);
 
-    if (username) {
-      fetchUserCollections();
-    }
-  }, [username]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <ProfileLayout activeTab="collections">
         <div className="text-center py-12">加载中...</div>
@@ -81,11 +82,17 @@ export function UserCollectionsPage() {
   }
 
   const handleShare = (postId: string, newShares: number) => {
-    setPosts(prev => prev.map(post =>
-      post.id.toString() === postId
-        ? { ...post, shares: newShares }
-        : post
-    ));
+    const inArticles = articleCollections.some((p: any) => String(p.id) === postId);
+    const updater = (data: any[] | undefined) =>
+      (data || []).map((p: any) =>
+        String(p.id) === postId ? { ...p, shares: newShares } : p
+      );
+
+    if (inArticles) {
+      mutateArticleCollections(updater, false);
+    } else {
+      mutateMomentCollections(updater, false);
+    }
   };
 
   return (

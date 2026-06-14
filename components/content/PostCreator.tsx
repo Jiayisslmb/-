@@ -96,7 +96,7 @@ export default function MomentCreator() {
       const response = await fetch(`/api${basePath}/${id}`);
       if (response.ok) {
         const postData = await response.json();
-        const postUrl = `${window.location.origin}/content/${type}/${id}`;
+        const postUrl = `/content/${type}/${id}`;
         const repostContent = `转发${type === 'article' ? '文章' : '动态'}
 「${postData.content.substring(0, 100)}${postData.content.length > 100 ? '...' : ''}」
 

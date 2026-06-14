@@ -3,11 +3,14 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
+import useSWR from 'swr';
+import { request } from '@/lib/fetch-client';
 import PostItem from '@/components/content/PostItem';
 import ProfileLayout from '@/components/profile/ProfileLayout';
 import { getIPFSUrl } from '@/lib/ipfs';
+import { useUserByUsername } from '@/lib/swr-config';
 
 
 interface PostData {
@@ -38,41 +41,39 @@ export function UserLikesPage() {
   const params = useParams();
   const username = params.username as string;
 
-  const [posts, setPosts] = useState<PostData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: userData } = useUserByUsername(username);
+  const userId = userData?.id;
 
-  useEffect(() => {
-    const fetchUserLikes = async () => {
-      try {
-        const userRes = await fetch(`/api/users/username/${username}`);
-        if (!userRes.ok) throw new Error('用户不存在');
-        const userData = await userRes.json();
+  const {
+    data: articleLikes = [],
+    isLoading: articleLoading,
+    mutate: mutateArticleLikes,
+  } = useSWR(
+    userId ? `/content/articles/user/${userId}/likes` : null,
+    (url) => request<any[]>(url)
+  );
 
-        const [articleLikes, momentLikes] = await Promise.all([
-          fetch(`/api/content/articles/user/${userData.id}/likes`).then(r => r.ok ? r.json() : []),
-          fetch(`/api/content/moments/user/${userData.id}/likes`).then(r => r.ok ? r.json() : []),
-        ]);
+  const {
+    data: momentLikes = [],
+    isLoading: momentLoading,
+    mutate: mutateMomentLikes,
+  } = useSWR(
+    userId ? `/content/moments/user/${userId}/likes` : null,
+    (url) => request<any[]>(url)
+  );
 
-        const allLikes = [
-          ...(Array.isArray(articleLikes) ? articleLikes : []).map((p: PostData) => ({ ...p, _type: 'article' as const })),
-          ...(Array.isArray(momentLikes) ? momentLikes : []).map((p: PostData) => ({ ...p, _type: 'moment' as const })),
-        ];
+  const isLoading = !userId || articleLoading || momentLoading;
 
-        allLikes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setPosts(allLikes);
-      } catch (err) {
-        console.error('获取点赞内容失败:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const posts = useMemo(() => {
+    const allLikes = [
+      ...articleLikes.map((p: any) => ({ ...p, _type: 'article' as const })),
+      ...momentLikes.map((p: any) => ({ ...p, _type: 'moment' as const })),
+    ];
+    allLikes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return allLikes;
+  }, [articleLikes, momentLikes]);
 
-    if (username) {
-      fetchUserLikes();
-    }
-  }, [username]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <ProfileLayout activeTab="likes">
         <div className="text-center py-12">加载中...</div>
@@ -81,11 +82,17 @@ export function UserLikesPage() {
   }
 
   const handleShare = (postId: string, newShares: number) => {
-    setPosts(prev => prev.map(post =>
-      post.id.toString() === postId
-        ? { ...post, shares: newShares }
-        : post
-    ));
+    const inArticles = articleLikes.some((p: any) => String(p.id) === postId);
+    const updater = (data: any[] | undefined) =>
+      (data || []).map((p: any) =>
+        String(p.id) === postId ? { ...p, shares: newShares } : p
+      );
+
+    if (inArticles) {
+      mutateArticleLikes(updater, false);
+    } else {
+      mutateMomentLikes(updater, false);
+    }
   };
 
   return (

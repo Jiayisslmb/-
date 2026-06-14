@@ -3,12 +3,14 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import useSWR from 'swr';
+import { request } from '@/lib/fetch-client';
 import Card from '@/components/ui/Card';
 import PostItem from '@/components/content/PostItem';
 import { getIPFSUrl } from '@/lib/ipfs';
+import { useUserByUsername } from '@/lib/swr-config';
 
 
 interface PostData {
@@ -32,46 +34,43 @@ export function UserPostsPage() {
   const params = useParams();
   const username = params.username as string;
 
-  const [moments, setMoments] = useState<PostData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: userData } = useUserByUsername(username);
+  const userId = userData?.id;
 
-  useEffect(() => {
-    const fetchUserAndMoments = async () => {
-      try {
-        const userRes = await fetch(`/api/users/username/${username}`);
-        if (!userRes.ok) throw new Error('用户不存在');
-        const userData = await userRes.json();
+  const {
+    data: moments = [],
+    isLoading,
+    error,
+    mutate,
+  } = useSWR(
+    userId ? `/content/moments/user/${userId}` : null,
+    (url) => request<any[]>(url)
+  );
 
-        const momentsRes = await fetch(`/api/content/moments/user/${userData.id}`);
-        if (momentsRes.ok) {
-          setMoments(await momentsRes.json());
-        }
-      } catch (err) {
-        console.error('获取动态失败:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (username) {
-      fetchUserAndMoments();
-    }
-  }, [username]);
-
-  if (loading) {
+  if (isLoading) {
     return <div className="text-center py-12">加载中...</div>;
   }
 
+  if (error) {
+    return <div className="text-center py-12 text-red-500">加载失败，请重试</div>;
+  }
+
   const handleDeletePost = (postId: string) => {
-    setMoments(prev => prev.filter(m => m.id.toString() !== postId));
+    mutate(
+      (currentData) =>
+        (currentData || []).filter((m: any) => String(m.id) !== postId),
+      false
+    );
   };
 
   const handleSharePost = (postId: string, newShares: number) => {
-    setMoments(prev => prev.map(m =>
-      m.id.toString() === postId
-        ? { ...m, shares: newShares }
-        : m
-    ));
+    mutate(
+      (currentData) =>
+        (currentData || []).map((m: any) =>
+          String(m.id) === postId ? { ...m, shares: newShares } : m
+        ),
+      false
+    );
   };
 
   return (

@@ -4,11 +4,13 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import useSWR from 'swr';
+import { request } from '@/lib/fetch-client';
 import PostItem from '@/components/content/PostItem';
 import ProfileLayout from '@/components/profile/ProfileLayout';
 import { getIPFSUrl } from '@/lib/ipfs';
+import { useUserByUsername } from '@/lib/swr-config';
 
 
 interface ArticleData {
@@ -40,33 +42,19 @@ export function UserWorksPage() {
   const params = useParams();
   const username = params.username as string;
 
-  const [articles, setArticles] = useState<ArticleData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: userData } = useUserByUsername(username);
+  const userId = userData?.id;
 
-  useEffect(() => {
-    const fetchUserArticles = async () => {
-      try {
-        const userRes = await fetch(`/api/users/username/${username}`);
-        if (!userRes.ok) throw new Error('用户不存在');
-        const userData = await userRes.json();
+  const {
+    data: articles = [],
+    isLoading,
+    mutate,
+  } = useSWR(
+    userId ? `/content/articles/user/${userId}` : null,
+    (url) => request<any[]>(url)
+  );
 
-        const articlesRes = await fetch(`/api/content/articles/user/${userData.id}`);
-        if (articlesRes.ok) {
-          setArticles(await articlesRes.json());
-        }
-      } catch (err) {
-        console.error('获取文章失败:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (username) {
-      fetchUserArticles();
-    }
-  }, [username]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <ProfileLayout activeTab="works">
         <div className="text-center py-12">加载中...</div>
@@ -75,11 +63,15 @@ export function UserWorksPage() {
   }
 
   const handleShare = (postId: string, newShares: number) => {
-    setArticles(prev => prev.map(article =>
-      String(article.id) === postId
-        ? { ...article, shares: newShares }
-        : article
-    ));
+    mutate(
+      (currentData) =>
+        (currentData || []).map((article: any) =>
+          String(article.id) === postId
+            ? { ...article, shares: newShares }
+            : article
+        ),
+      false
+    );
   };
 
   return (
