@@ -6,10 +6,11 @@ import remarkGfm from 'remark-gfm';
 interface ChatbotMessageProps {
   role: 'user' | 'assistant';
   content: string;
+  imageUrl?: string;
   isLoading?: boolean;
 }
 
-export default function ChatbotMessage({ role, content, isLoading }: ChatbotMessageProps) {
+export default function ChatbotMessage({ role, content, imageUrl, isLoading }: ChatbotMessageProps) {
   const isUser = role === 'user';
 
   return (
@@ -27,14 +28,32 @@ export default function ChatbotMessage({ role, content, isLoading }: ChatbotMess
             <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
             <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
           </span>
-        ) : isUser ? (
-          <p className="whitespace-pre-wrap">{content}</p>
         ) : (
-          <div className="prose prose-sm max-w-none prose-p:my-1 prose-code:bg-gray-200 prose-code:px-1 prose-code:rounded prose-pre:bg-gray-800 prose-pre:text-gray-100">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {content}
-            </ReactMarkdown>
-          </div>
+          <>
+            {imageUrl && (
+              <div className="mb-2">
+                <img
+                  src={imageUrl}
+                  alt="Attached"
+                  className="max-w-full max-h-48 rounded-lg object-contain"
+                />
+                {content === '[图片]' ? (
+                  <span className="text-xs opacity-70 mt-1 block">🖼️ 图片</span>
+                ) : null}
+              </div>
+            )}
+            {content && content !== '[图片]' && (
+              isUser ? (
+                <p className="whitespace-pre-wrap">{content}</p>
+              ) : (
+                <div className="prose prose-sm max-w-none prose-p:my-1 prose-code:bg-gray-200 prose-code:px-1 prose-code:rounded prose-pre:bg-gray-800 prose-pre:text-gray-100">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {content}
+                  </ReactMarkdown>
+                </div>
+              )
+            )}
+          </>
         )}
       </div>
     </div>

@@ -1,13 +1,21 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from 'react';
 import { sendMessage } from '@/lib/chatbot';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  imageUrl?: string;
   timestamp: number;
+}
+
+interface Conversation {
+  id: number;
+  title: string;
+  model: string;
+  updatedAt: string;
 }
 
 interface ChatbotContextType {
@@ -15,138 +23,93 @@ interface ChatbotContextType {
   isOpen: boolean;
   isLoading: boolean;
   tokenUsage: { estimated: number; max: number };
+  conversations: Conversation[];
+  activeConversationId: number | null;
+  pendingImage: File | null;
+  mode: 'auto' | 'fast' | 'deep';
   togglePanel: () => void;
   send: (text: string) => Promise<void>;
   clearMessages: () => void;
+  createNewConversation: () => void;
+  switchConversation: (id: number) => Promise<void>;
+  deleteConversation: (id: number) => Promise<void>;
+  setPendingImage: (file: File | null) => void;
+  setMode: (mode: 'auto' | 'fast' | 'deep') => void;
 }
 
 const ChatbotContext = createContext<ChatbotContextType | undefined>(undefined);
-
-export function useChatbot() {
-  const ctx = useContext(ChatbotContext);
-  if (!ctx) throw new Error('useChatbot must be used within ChatbotProvider');
-  return ctx;
-}
+const ESTIMATED_MAX_TOKENS = 2048;
 
 const WELCOME_MESSAGE: Message = {
   id: 'welcome',
   role: 'assistant',
-  content: '你好！我是平台AI助手，专注于解答去中心化社交平台相关问题。请问有什么想了解的？',
+  content: '你好！我是平台AI助手，专注于解答平台相关问题。你可以上传图片让我识别，我会自动判断使用快速或深度模式。',
   timestamp: Date.now(),
 };
-
-// Token optimization constants
-const MAX_CONTEXT_MESSAGES = 10;
-const MAX_USER_MESSAGE_LENGTH = 500;
-const MAX_ASSISTANT_MESSAGE_LENGTH = 1000;
-const ESTIMATED_MAX_TOKENS = 2048;
-
-const ACKNOWLEDGEMENT_PATTERNS = /^(谢谢|好的|嗯|OK|知道了|明白了|了解了|收到)[\s!！。.,，]*$/i;
-
-const OFF_TOPIC_PATTERNS = [
-  '写代码', '编程', '帮我写', '生成代码', 'debug', '写个', '代码',
-  '讲个笑话', '笑话', '段子', '搞笑',
-  '天气', '天气预报', '今天天气',
-  '推荐电影', '好看的电影', '看电影', '追剧',
-  '做饭', '菜谱', '怎么做菜', '食谱',
-  '游戏', '玩游戏', '打游戏', 'LOL', '王者',
-  '股票', '炒股', '基金', '理财',
-  '新闻', '时事', '政治',
-];
-
-const GREETING_PATTERNS = /^(你好|hi|hello|嗨|早上好|下午好|晚上好|在吗|在不|嗨喽)[\s!！。.,，]*$/i;
-
-function estimateTokens(text: string): number {
-  return Math.ceil(text.length * 0.5);
-}
-
-function truncateMessageContent(content: string, role: 'user' | 'assistant'): string {
-  const maxLen = role === 'user' ? MAX_USER_MESSAGE_LENGTH : MAX_ASSISTANT_MESSAGE_LENGTH;
-  if (content.length <= maxLen) return content;
-  return content.slice(0, maxLen) + '...';
-}
-
-function isPlatformQuestion(text: string, previousMessages?: { role: string; content: string }[]): boolean {
-  const lowerText = text.toLowerCase();
-
-  // Allow greetings without platform keywords
-  if (GREETING_PATTERNS.test(text.trim())) return true;
-
-  // Block off-topic intents
-  if (OFF_TOPIC_PATTERNS.some(p => lowerText.includes(p.toLowerCase()))) return false;
-
-  // Co-reference check: if user references something from a previous AI response
-  if (previousMessages && previousMessages.length > 0) {
-    const lastAssistantMsg = [...previousMessages].reverse().find(m => m.role === 'assistant');
-    if (lastAssistantMsg) {
-      const aiContent = lastAssistantMsg.content;
-      const userWords = lowerText.split(/\s+/).filter(w => w.length > 1);
-      const coRefCount = userWords.filter(w => aiContent.includes(w)).length;
-      if (coRefCount >= 3) return true;
-    }
-  }
-
-  const platformKeywords = [
-    '平台', '功能', '使用', '怎么', '如何', '什么', '帮助',
-    '去中心化', 'IPFS', 'P2P', '区块链', '加密', '隐私',
-    '圈子', '动态', '文章', '私信', '关注', '粉丝', '收藏',
-    '设置', '个人', '主页', '搜索', '热门', '话题',
-    '注册', '登录', '密码', '账号', '安全',
-    '社交', '内容', '发布', '评论', '点赞', '转发',
-    '钱包', '交易', 'NFT', '智能合约',
-    '问题', '错误', '报错', 'bug', '故障',
-  ];
-
-  return platformKeywords.some(keyword => lowerText.includes(keyword));
-}
-
-function pruneContextMessages(
-  messages: { role: 'user' | 'assistant'; content: string }[],
-  currentQuestion: string,
-): { role: 'user' | 'assistant'; content: string }[] {
-  if (messages.length <= 4) return messages;
-
-  const result: { role: 'user' | 'assistant'; content: string }[] = [];
-
-  // Always keep the most recent 2 messages
-  const recent = messages.slice(-2);
-  const older = messages.slice(0, -2);
-
-  // For older messages, keep only those relevant to current question
-  const questionWords = new Set(currentQuestion.toLowerCase().split(/\s+/).filter(w => w.length > 1));
-
-  for (const msg of older) {
-    // Drop pure acknowledgements
-    if (ACKNOWLEDGEMENT_PATTERNS.test(msg.content.trim())) continue;
-
-    // Keep if shares keywords with current question or if it's a recent exchange
-    const msgWords = msg.content.toLowerCase().split(/\s+/).filter(w => w.length > 1);
-    const sharedWords = msgWords.filter(w => questionWords.has(w));
-    if (sharedWords.length >= 2) {
-      result.push(msg);
-    }
-  }
-
-  result.push(...recent);
-
-  // Cap at MAX_CONTEXT_MESSAGES
-  return result.slice(-MAX_CONTEXT_MESSAGES);
-}
-
-function getNonPlatformResponse(): string {
-  return '抱歉，我是平台专属助手，仅能回答与去中心化社交平台相关的问题。你可以询问我关于平台功能、使用方法、技术原理等方面的问题。';
-}
 
 export function ChatbotProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [tokenUsage, setTokenUsage] = useState({ estimated: 0, max: ESTIMATED_MAX_TOKENS });
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const [mode, setMode] = useState<'auto' | 'fast' | 'deep'>('auto');
   const abortRef = useRef<AbortController | null>(null);
 
-  const togglePanel = useCallback(() => {
-    setIsOpen((prev) => !prev);
+  // Load conversations on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch('/api/chatbot/conversations', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setConversations(data);
+      })
+      .catch(() => {});
   }, []);
+
+  const togglePanel = useCallback(() => setIsOpen(p => !p), []);
+
+  const createNewConversation = useCallback(() => {
+    setMessages([WELCOME_MESSAGE]);
+    setActiveConversationId(null);
+    setPendingImage(null);
+    setTokenUsage({ estimated: 0, max: ESTIMATED_MAX_TOKENS });
+  }, []);
+
+  const switchConversation = useCallback(async (id: number) => {
+    setActiveConversationId(id);
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`/api/chatbot/conversations/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setMessages(data.map((m: any) => ({
+          id: String(m.id),
+          role: m.role,
+          content: m.content,
+          imageUrl: m.imageUrl,
+          timestamp: new Date(m.createdAt).getTime(),
+        })));
+      }
+    } catch {}
+  }, []);
+
+  const deleteConversation = useCallback(async (id: number) => {
+    const token = localStorage.getItem('token');
+    await fetch(`/api/chatbot/conversations/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setConversations(prev => prev.filter(c => c.id !== id));
+    if (activeConversationId === id) {
+      createNewConversation();
+    }
+  }, [activeConversationId, createNewConversation]);
 
   const clearMessages = useCallback(() => {
     setMessages([WELCOME_MESSAGE]);
@@ -154,97 +117,99 @@ export function ChatbotProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const send = useCallback(async (text: string) => {
-    const trimmedText = text.trim();
-
-    if (!isPlatformQuestion(trimmedText, messages)) {
-      const rejectMsg: Message = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: getNonPlatformResponse(),
-        timestamp: Date.now(),
-      };
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `user-${Date.now()}`,
-          role: 'user',
-          content: trimmedText.slice(0, MAX_USER_MESSAGE_LENGTH),
-          timestamp: Date.now(),
-        },
-        rejectMsg,
-      ]);
-      return;
-    }
+    if (!text.trim() && !pendingImage) return;
 
     const userMsg: Message = {
-      id: `user-${Date.now()}`,
+      id: Date.now().toString(),
       role: 'user',
-      content: truncateMessageContent(trimmedText, 'user'),
+      content: text || '[图片]',
+      imageUrl: pendingImage ? URL.createObjectURL(pendingImage) : undefined,
       timestamp: Date.now(),
     };
 
-    const assistantMsg: Message = {
-      id: `assistant-${Date.now()}`,
-      role: 'assistant',
-      content: '',
-      timestamp: Date.now(),
-    };
+    // Convert image to base64 if present
+    let imageBase64: string | undefined;
+    if (pendingImage) {
+      imageBase64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(pendingImage);
+      });
+    }
 
-    setMessages((prev) => [...prev, userMsg, assistantMsg]);
+    setMessages(prev => [...prev, userMsg]);
+    setPendingImage(null);
     setIsLoading(true);
 
     const controller = new AbortController();
     abortRef.current = controller;
 
-    // Build context with smart pruning
-    const rawContext = [...messages, userMsg]
-      .filter((m) => m.id !== 'welcome')
-      .map((m) => ({
-        role: m.role,
-        content: truncateMessageContent(m.content, m.role),
-      }));
-    const contextMessages = pruneContextMessages(rawContext, trimmedText);
-
-    // Estimate token usage
-    const totalChars = contextMessages.reduce((sum, m) => sum + m.content.length, 0);
-    setTokenUsage({ estimated: Math.ceil(totalChars * 0.5), max: ESTIMATED_MAX_TOKENS });
-
     try {
-      let streamedContent = '';
+      let fullContent = '';
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: '',
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, assistantMsg]);
+
       await sendMessage(
-        contextMessages,
+        [{ role: 'user', content: text || '[图片]', ...(imageBase64 ? { imageUrl: imageBase64 } : {}) }],
         (chunk) => {
-          streamedContent += chunk;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsg.id ? { ...m, content: streamedContent } : m,
-            ),
-          );
+          fullContent += chunk;
+          setMessages(prev => prev.map(m =>
+            m.id === assistantMsg.id ? { ...m, content: fullContent } : m
+          ));
         },
         controller.signal,
+        activeConversationId || undefined,
+        mode
       );
 
-      // Update token estimate after response
-      const responseTokens = estimateTokens(streamedContent) + Math.ceil(totalChars * 0.5);
-      setTokenUsage({ estimated: responseTokens, max: ESTIMATED_MAX_TOKENS });
-    } catch (err: unknown) {
-      if (err instanceof DOMException && err.name === 'AbortError') return;
-      const errorText = err instanceof Error ? err.message : '请求失败，请稍后重试';
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMsg.id ? { ...m, content: `请求失败: ${errorText}` } : m,
-        ),
-      );
+      // Update token estimate
+      setTokenUsage(prev => ({
+        ...prev,
+        estimated: prev.estimated + Math.ceil((text.length + fullContent.length) * 0.5),
+      }));
+
+      // Refresh conversation list
+      const token = localStorage.getItem('token');
+      if (token) {
+        fetch('/api/chatbot/conversations', { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json())
+          .then(data => { if (Array.isArray(data)) setConversations(data); })
+          .catch(() => {});
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        setMessages(prev => [...prev, {
+          id: 'error-' + Date.now(),
+          role: 'assistant',
+          content: '抱歉，请求出错了：' + (err.message || '未知错误'),
+          timestamp: Date.now(),
+        }]);
+      }
     } finally {
       setIsLoading(false);
       abortRef.current = null;
     }
-  }, [messages]);
+  }, [pendingImage, activeConversationId, mode]);
 
-  return (
-    <ChatbotContext.Provider value={{ messages, isOpen, isLoading, tokenUsage, togglePanel, send, clearMessages }}>
-      {children}
-    </ChatbotContext.Provider>
-  );
+  const value: ChatbotContextType = {
+    messages, isOpen, isLoading, tokenUsage,
+    conversations, activeConversationId,
+    pendingImage, mode,
+    togglePanel, send, clearMessages,
+    createNewConversation, switchConversation, deleteConversation,
+    setPendingImage, setMode,
+  };
+
+  return React.createElement(ChatbotContext.Provider, { value }, children);
+}
+
+export function useChatbot() {
+  const ctx = useContext(ChatbotContext);
+  if (!ctx) throw new Error('useChatbot must be used within ChatbotProvider');
+  return ctx;
 }

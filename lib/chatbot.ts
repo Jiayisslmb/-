@@ -3,6 +3,7 @@
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  imageUrl?: string;
 }
 
 const API_BASE = '/api';
@@ -16,6 +17,8 @@ export async function sendMessage(
   messages: ChatMessage[],
   onChunk: (text: string) => void,
   signal?: AbortSignal,
+  conversationId?: number,
+  mode?: 'auto' | 'fast' | 'deep',
 ): Promise<string> {
   const response = await fetch(`${API_BASE}/chatbot/message`, {
     method: 'POST',
@@ -23,7 +26,7 @@ export async function sendMessage(
       'Content-Type': 'application/json',
       ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
     },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify({ messages, conversationId, mode }),
     signal,
   });
 
