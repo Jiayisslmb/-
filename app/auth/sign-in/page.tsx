@@ -300,8 +300,17 @@ export default function SignInPage() {
       if (res.ok) {
         const data = await res.json();
         localStorage.setItem('token', data.accessToken);
+        if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('userId', String(data.user.id));
         document.cookie = `token=${data.accessToken}; path=/; max-age=604800; SameSite=Lax`;
+        document.cookie = `isAdmin=${data.user.isAdmin ? 'true' : 'false'}; path=/; max-age=604800; SameSite=Lax`;
+
+        // 建立 WebSocket 全局连接
+        const { chatClient } = await import('@/lib/chat');
+        chatClient.connect(data.accessToken).catch((err: any) => {
+          console.warn('WebSocket 连接失败:', err?.message);
+        });
+
         router.push('/');
       } else {
         const data = await res.json().catch(() => ({}));

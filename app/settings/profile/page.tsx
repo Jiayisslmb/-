@@ -20,10 +20,16 @@ export default function ProfileSettingsPage() {
   const [formData, setFormData] = useState({
     nickname: '',
     bio: '',
+    email: '',
     avatarCid: '',
     backgroundCid: '',
     backgroundColor: '#f0f0f0',
   });
+
+  // 邮箱相关状态
+  const [emailVerificationCode, setEmailVerificationCode] = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailVerifying, setEmailVerifying] = useState(false);
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
@@ -37,6 +43,7 @@ export default function ProfileSettingsPage() {
       setFormData({
         nickname: user.nickname || '',
         bio: user.bio || '',
+        email: user.email || '',
         avatarCid: user.avatarCid || '',
         backgroundCid: user.backgroundCid || '',
         backgroundColor: user.backgroundColor || '#f0f0f0',
@@ -354,6 +361,105 @@ export default function ProfileSettingsPage() {
             </div>
           </div>
 
+          {/* 邮箱管理 */}
+          <div className="p-6 space-y-4 hover:bg-gray-50/50 transition-colors duration-200">
+            <label className="block text-sm font-bold text-gray-900 mb-1">邮箱地址</label>
+            <p className="text-xs text-gray-500 mb-3">
+              用于登录验证和密码找回。
+              {user?.email && (
+                <span className={user.emailVerified ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
+                  {user.emailVerified ? ' 已验证 ✓' : ' 未验证'}
+                </span>
+              )}
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                type="email"
+                name="email"
+                value={formData.email || ''}
+                onChange={handleChange}
+                placeholder={user?.email || '未设置邮箱'}
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#6364FF] focus:border-[#6364FF] text-sm transition-all duration-200"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={async () => {
+                  if (!formData.email) {
+                    toast.error('请输入新邮箱地址');
+                    return;
+                  }
+                  const password = prompt('请输入当前密码以确认修改：');
+                  if (!password) return;
+                  try {
+                    const { changeEmail } = await import('@/lib/api');
+                    const result = await changeEmail(formData.email, password);
+                    toast.success(result.message || '邮箱修改成功');
+                    // 刷新用户信息
+                    window.dispatchEvent(new CustomEvent('profileUpdated'));
+                  } catch (err: any) {
+                    toast.error(err.message || '邮箱修改失败');
+                  }
+                }}
+                className="!rounded-lg whitespace-nowrap"
+              >
+                修改邮箱
+              </Button>
+            </div>
+            {user?.email && !user.emailVerified && (
+              <div className="flex items-center gap-3 mt-2">
+                <input
+                  type="text"
+                  placeholder="输入邮箱验证码"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#6364FF] text-sm"
+                  id="email-verification-code"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const { sendEmailVerification } = await import('@/lib/api');
+                      await sendEmailVerification();
+                      toast.success('验证码已发送，请查收邮件');
+                    } catch (err: any) {
+                      toast.error(err.message || '发送失败，请确认邮件服务已配置');
+                    }
+                  }}
+                  className="!rounded-lg whitespace-nowrap"
+                >
+                  发送验证码
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={async () => {
+                    const codeInput = document.getElementById('email-verification-code') as HTMLInputElement;
+                    const code = codeInput?.value;
+                    if (!code || code.length !== 6) {
+                      toast.error('请输入6位验证码');
+                      return;
+                    }
+                    try {
+                      const { verifyEmail } = await import('@/lib/api');
+                      const result = await verifyEmail(code);
+                      toast.success(result.message || '邮箱验证成功');
+                      window.dispatchEvent(new CustomEvent('profileUpdated'));
+                    } catch (err: any) {
+                      toast.error(err.message || '验证失败');
+                    }
+                  }}
+                  className="!rounded-lg whitespace-nowrap"
+                >
+                  验证
+                </Button>
+              </div>
+            )}
+          </div>
+
           {/* 操作按钮 */}
           <div className="p-6 bg-gray-50/50 flex gap-4">
             <Button
@@ -375,6 +481,45 @@ export default function ProfileSettingsPage() {
             </Button>
           </div>
         </form>
+      </Card>
+
+      {/* 危险操作区域 */}
+      <Card className="border-red-200 shadow-sm mt-6 bg-red-50/30">
+        <div className="p-6">
+          <h3 className="text-lg font-bold text-red-700 mb-2">危险操作</h3>
+          <p className="text-sm text-red-600 mb-4">
+            注销账号是不可逆操作，所有数据（动态、文章、评论、收藏等）将被永久删除。
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="!border-red-300 !text-red-600 hover:!bg-red-50 !rounded-xl"
+            onClick={async () => {
+              const confirmed = window.confirm(
+                '确定要注销账号吗？\n\n此操作不可撤销，所有数据将被永久删除。\n\n如果确定，请点击"确定"后输入密码确认。'
+              );
+              if (!confirmed) return;
+
+              const password = prompt('请输入当前密码以确认注销：');
+              if (!password) return;
+
+              try {
+                const { deleteAccount } = await import('@/lib/api');
+                const result = await deleteAccount(password);
+                alert(result.message || '账号已注销');
+                // 清除本地状态并跳转
+                localStorage.clear();
+                document.cookie = 'token=; path=/; max-age=0';
+                document.cookie = 'isAdmin=; path=/; max-age=0';
+                window.location.href = '/auth/sign-in';
+              } catch (err: any) {
+                alert(err.message || '注销失败，请重试');
+              }
+            }}
+          >
+            注销账号
+          </Button>
+        </div>
       </Card>
     </SettingsLayout>
   );

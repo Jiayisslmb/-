@@ -345,6 +345,35 @@ export async function getBlockedUsers(skip?: number, take?: number) {
   return request<UserDTO[]>(`/users/blocked/list?${params}`);
 }
 
+// ==================== 邮箱管理 API ====================
+
+export async function changeEmail(newEmail: string, password: string) {
+  return request<{ success: boolean; message: string }>('/users/change-email', {
+    method: 'POST',
+    body: JSON.stringify({ newEmail, password }),
+  });
+}
+
+export async function sendEmailVerification() {
+  return request<{ success: boolean; message: string }>('/users/send-email-verification', {
+    method: 'POST',
+  });
+}
+
+export async function verifyEmail(code: string) {
+  return request<{ success: boolean; message: string }>('/users/verify-email', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function deleteAccount(password: string) {
+  return request<{ success: boolean; message: string }>('/users/account', {
+    method: 'DELETE',
+    body: JSON.stringify({ password }),
+  });
+}
+
 // ==================== 圈子API ====================
 
 export async function createCircle(data: {

@@ -114,7 +114,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (username: string, password: string, mfaToken?: string) => Promise<{ requireMfa?: boolean } | void>;
   adminLogin: (username: string, password: string, mfaToken?: string) => Promise<{ requireMfa?: boolean } | void>;
-  register: (data: { username: string; password: string; nickname?: string; captchaKey?: string; captchaAnswer?: string }) => Promise<void>;
+  register: (data: { username: string; password: string; email?: string; nickname?: string; captchaKey?: string; captchaAnswer?: string }) => Promise<void>;
   logout: () => void;
   updateProfile: (data: Partial<UserDTO>) => Promise<UserDTO>;
 }
@@ -273,6 +273,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           globalBackgroundCid: userData.globalBackgroundCid as string | undefined,
           globalBackgroundColor: userData.globalBackgroundColor as string | undefined,
           bio: userData.bio as string | undefined,
+          email: userData.email as string | undefined,
+          emailVerified: userData.emailVerified as boolean | undefined,
           isAdmin: userData.isAdmin as boolean | undefined,
           allowFollow: userData.allowFollow as boolean | undefined,
           allowMessage: userData.allowMessage as boolean | undefined,
@@ -357,6 +359,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         globalBackgroundCid: data.user.globalBackgroundCid,
         globalBackgroundColor: data.user.globalBackgroundColor,
         bio: data.user.bio,
+        email: data.user.email,
+        emailVerified: data.user.emailVerified,
         isAdmin: data.user.isAdmin,
         language: data.user.language,
         fontSize: data.user.fontSize,
@@ -389,7 +393,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // 注册
   const register = useCallback(
-    async (data: { username: string; password: string; nickname?: string; captchaKey?: string; captchaAnswer?: string }) => {
+    async (data: { username: string; password: string; email?: string; nickname?: string; captchaKey?: string; captchaAnswer?: string }) => {
       setIsLoading(true);
       try {
         const response = await fetch(`${API_URL}/users/register`, {
@@ -400,6 +404,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({
             username: data.username,
             password: data.password,
+            email: data.email || undefined,
             nickname: data.nickname,
             captchaKey: data.captchaKey,
             captchaAnswer: data.captchaAnswer,

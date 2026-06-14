@@ -17,6 +17,8 @@ export interface User {
   nickname?: string | null;
   avatarCid?: string | null;
   bio?: string | null;
+  email?: string | null;
+  emailVerified?: boolean;
   isAdmin: boolean;
   isFrozen: boolean;
   createdAt: string;
@@ -71,6 +73,8 @@ export interface UserDTO {
   avatar?: string;
   avatarCid?: string | null;
   bio?: string | null;
+  email?: string | null;
+  emailVerified?: boolean;
   isAdmin?: boolean;
   isFrozen?: boolean;
   createdAt?: string;

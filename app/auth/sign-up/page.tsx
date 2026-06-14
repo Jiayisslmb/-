@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
@@ -10,12 +10,14 @@ import Input from '@/components/ui/Input';
 import Card from '@/components/ui/Card';
 import GitHubLoginButton from '@/components/auth/GitHubLoginButton';
 
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 
 export default function SignUpPage() {
   const router = useRouter();
   const { register } = useAuth();
   const [formData, setFormData] = useState({
     username: '',
+    email: '',
     nickname: '',
     password: '',
     confirmPassword: '',
@@ -26,6 +28,11 @@ export default function SignUpPage() {
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [captcha, setCaptcha] = useState<{ key: string; question: string } | null>(null);
   const [captchaLoading, setCaptchaLoading] = useState(true);
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
+  const turnstileRef = useRef<string>('');  // widget ID
+  const turnstileLoaded = useRef(false);
+
+  const useTurnstile = !!TURNSTILE_SITE_KEY;
 
   const fetchCaptcha = async () => {
     setCaptchaLoading(true);
@@ -42,9 +49,72 @@ export default function SignUpPage() {
     }
   };
 
+  // 加载 Turnstile 脚本和渲染 widget
   useEffect(() => {
-    fetchCaptcha();
+    if (!useTurnstile) {
+      fetchCaptcha();
+      return;
+    }
+
+    const scriptId = 'turnstile-script';
+    if (document.getElementById(scriptId)) {
+      // 脚本已存在，直接渲染
+      renderTurnstile();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      renderTurnstile();
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      // 清理
+      if (turnstileRef.current && (window as any).turnstile) {
+        (window as any).turnstile.remove(turnstileRef.current);
+      }
+    };
   }, []);
+
+  const renderTurnstile = useCallback(() => {
+    const container = document.getElementById('turnstile-container');
+    if (!container || !(window as any).turnstile) return;
+
+    // 清除旧 widget
+    if (turnstileRef.current && (window as any).turnstile) {
+      (window as any).turnstile.remove(turnstileRef.current);
+    }
+
+    try {
+      turnstileRef.current = (window as any).turnstile.render('#turnstile-container', {
+        sitekey: TURNSTILE_SITE_KEY,
+        theme: 'light',
+        callback: (token: string) => {
+          setTurnstileToken(token);
+        },
+        'expired-callback': () => {
+          setTurnstileToken('');
+        },
+      });
+    } catch (e) {
+      console.error('Turnstile 渲染失败:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!useTurnstile) {
+      fetchCaptcha();
+      return;
+    }
+
+    // Turnstile 模式：也加载数学验证码作为备选
+    fetchCaptcha();
+  }, [useTurnstile]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -58,12 +128,17 @@ export default function SignUpPage() {
 
     const validation = validateSchema(registerSchema, {
       username: formData.username,
+      email: formData.email || undefined,
       password: formData.password,
       confirmPassword: formData.confirmPassword,
     });
 
     if (!validation.success) {
       Object.assign(newErrors, validation.errors || {});
+    }
+
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = '请输入有效的邮箱地址';
     }
 
     if (!formData.nickname || formData.nickname.trim().length < 1) {
@@ -76,10 +151,17 @@ export default function SignUpPage() {
       newErrors.terms = '请同意服务条款和隐私政策';
     }
 
-    if (!captcha) {
-      newErrors.submit = '请等待验证码加载完成';
-    } else if (!formData.captchaAnswer) {
-      newErrors.captcha = '请输入验证码';
+    // Turnstile 或数学验证码验证
+    if (useTurnstile) {
+      if (!turnstileToken) {
+        newErrors.turnstile = '请完成人机验证';
+      }
+    } else {
+      if (!captcha) {
+        newErrors.submit = '请等待验证码加载完成';
+      } else if (!formData.captchaAnswer) {
+        newErrors.captcha = '请输入验证码';
+      }
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -89,12 +171,31 @@ export default function SignUpPage() {
 
     setLoading(true);
     try {
+      // Turnstile 模式：先验证 token
+      if (useTurnstile && turnstileToken) {
+        const verifyRes = await fetch('/api/auth/verify-turnstile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: turnstileToken }),
+        });
+        if (!verifyRes.ok) {
+          const errData = await verifyRes.json().catch(() => ({}));
+          throw new Error(errData.message || '人机验证失败，请重试');
+        }
+        // 重新获取新 token
+        if ((window as any).turnstile && turnstileRef.current) {
+          (window as any).turnstile.reset(turnstileRef.current);
+        }
+        setTurnstileToken('');
+      }
+
       await register({
         username: formData.username,
+        email: formData.email || undefined,
         nickname: formData.nickname,
         password: formData.password,
-        captchaKey: captcha!.key,
-        captchaAnswer: formData.captchaAnswer,
+        captchaKey: useTurnstile ? 'turnstile' : captcha!.key,
+        captchaAnswer: useTurnstile ? 'turnstile_verified' : formData.captchaAnswer,
       } as any);
       router.push('/');
     } catch (error: any) {
@@ -102,6 +203,10 @@ export default function SignUpPage() {
       setErrors({ submit: errorMessage });
       fetchCaptcha();
       setFormData(prev => ({ ...prev, captchaAnswer: '' }));
+      if (useTurnstile && (window as any).turnstile && turnstileRef.current) {
+        (window as any).turnstile.reset(turnstileRef.current);
+      }
+      setTurnstileToken('');
     } finally {
       setLoading(false);
     }
@@ -138,6 +243,17 @@ export default function SignUpPage() {
             />
 
             <Input
+              label="邮箱（选填）"
+              name="email"
+              type="email"
+              placeholder="输入邮箱地址"
+              value={formData.email}
+              onChange={handleChange}
+              error={errors.email}
+              helperText="用于登录验证和密码找回，建议填写"
+            />
+
+            <Input
               label="昵称"
               name="nickname"
               type="text"
@@ -169,8 +285,21 @@ export default function SignUpPage() {
               error={errors.confirmPassword}
             />
 
+            {/* 人机验证 */}
             <div>
-              {captchaLoading ? (
+              <label className="block text-sm font-semibold text-gray-700 mb-2">人机验证</label>
+              {useTurnstile ? (
+                <div className="space-y-2">
+                  <div
+                    id="turnstile-container"
+                    className="flex justify-center min-h-[65px]"
+                  />
+                  {errors.turnstile && (
+                    <p className="text-red-500 text-sm animate-slideDown">{errors.turnstile}</p>
+                  )}
+                  <p className="text-xs text-gray-400">Cloudflare Turnstile 自动验证，无需手动输入</p>
+                </div>
+              ) : captchaLoading ? (
                 <div className="h-16 flex items-center justify-center bg-gray-50 rounded-xl border border-gray-200">
                   <div className="flex items-center gap-2 text-gray-400">
                     <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -183,7 +312,6 @@ export default function SignUpPage() {
               ) : captcha ? (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="block text-sm font-semibold text-gray-700">验证码</label>
                     <button
                       type="button"
                       onClick={fetchCaptcha}
