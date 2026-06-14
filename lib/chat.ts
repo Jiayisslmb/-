@@ -142,7 +142,7 @@ class ChatClient {
         this.socket = io(socketUrl, {
           auth: { token: activeToken },
           path: '/api/socket.io',
-          transports: ['polling'],
+          transports: ['websocket', 'polling'],
           reconnection: true,
           reconnectionAttempts: this.maxReconnectAttempts,
           reconnectionDelay: this.reconnectDelay,
@@ -188,7 +188,10 @@ class ChatClient {
       });
 
       this.socket.on('connect_error', (error) => {
-        console.error('WebSocket 连接错误:', error);
+        // 只记录前两次连接错误，避免日志刷屏
+        if (this.reconnectAttempts <= 2) {
+          console.warn('WebSocket 连接中...', error.message);
+        }
         this.reconnectAttempts++;
         this.isConnecting = false;
         this.updateConnectionState();
