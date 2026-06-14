@@ -99,9 +99,9 @@ export default function SettingsLayout({ children, title }: SettingsLayoutProps)
   };
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-white">
-      {/* 桌面端左侧导航菜单 — 整体 sticky，导航+退出按钮始终可见 */}
-      <div className="hidden md:flex flex-col w-56 lg:w-64 border-r border-gray-200 shrink-0 sticky top-24 self-start max-h-[calc(100vh-7rem)]">
+    <div className="flex flex-col md:flex-row bg-white">
+      {/* 桌面端左侧导航菜单 — sticky 固定高度，内部溢出可滚 */}
+      <div className="hidden md:flex flex-col w-56 lg:w-64 border-r border-gray-200 shrink-0 sticky top-24 h-[calc(100vh-6rem)]">
         <nav className="space-y-1 flex-1 overflow-y-auto p-6 pb-2">
           {settingsMenu.map((item) => (
             <Link
