@@ -10,7 +10,6 @@ import { useMultipleOnlineStatus, formatLastSeen } from '@/lib/hooks/useOnlineSt
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Avatar from '@/components/ui/Avatar';
-import SettingsLayout from '@/components/layout/SettingsLayout';
 import OnlineStatusIndicator from '@/components/common/OnlineStatusIndicator';
 import { getIPFSUrl } from '@/lib/ipfs';
 
@@ -222,23 +221,27 @@ export default function FollowingManagementPage() {
 
   if (!isAuthenticated) {
     return (
-      <SettingsLayout title="关注管理">
+      <>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight mb-2">关注管理</h1>
+        <div className="mb-6 h-1 w-16 bg-gradient-to-r from-[#6364FF] to-[#8B83FF] rounded-full" />
         <div className="text-center py-12">
           <p className="text-gray-600 mb-4">请先登录</p>
           <Button variant="primary" onClick={() => router.push('/auth/sign-in')}>
             前往登录
           </Button>
         </div>
-      </SettingsLayout>
+      </>
     );
   }
 
   if (loading) {
-    return <SettingsLayout title="关注管理"><div className="text-center py-12">加载中...</div></SettingsLayout>;
+    return <><h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight mb-2">关注管理</h1><div className="mb-6 h-1 w-16 bg-gradient-to-r from-[#6364FF] to-[#8B83FF] rounded-full" /><div className="text-center py-12">加载中...</div></>;
   }
 
   return (
-    <SettingsLayout title="关注管理">
+    <>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight mb-2">关注管理</h1>
+      <div className="mb-6 h-1 w-16 bg-gradient-to-r from-[#6364FF] to-[#8B83FF] rounded-full" />
       <div className="space-y-6">
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8" role="tablist">
@@ -392,7 +395,7 @@ export default function FollowingManagementPage() {
           )}
         </Card>
       </div>
-    </SettingsLayout>
+    </>
   );
 }
 

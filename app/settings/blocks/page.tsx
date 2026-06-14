@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import SettingsLayout from '@/components/layout/SettingsLayout';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -58,7 +57,9 @@ export default function BlocksPage() {
   };
 
   return (
-    <SettingsLayout title="屏蔽管理">
+    <>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight mb-2">屏蔽管理</h1>
+      <div className="mb-6 h-1 w-16 bg-gradient-to-r from-[#6364FF] to-[#8B83FF] rounded-full" />
       <Card className="border-[var(--mastodon-border)] shadow-sm overflow-hidden">
         <div className="p-5 border-b border-[var(--mastodon-border-light)] bg-gradient-to-r from-[var(--mastodon-bg)] to-[var(--mastodon-surface)]">
           <h2 className="text-base font-bold text-[var(--mastodon-text-primary)]">
@@ -131,6 +132,6 @@ export default function BlocksPage() {
           </div>
         )}
       </Card>
-    </SettingsLayout>
+    </>
   );
 }

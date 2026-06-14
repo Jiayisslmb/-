@@ -9,7 +9,6 @@ import { getIPFSUrl } from '@/lib/ipfs';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import SettingsLayout from '@/components/layout/SettingsLayout';
 import { toast } from '@/lib/toast';
 
 
@@ -160,7 +159,9 @@ export default function ProfileSettingsPage() {
 
   if (!isAuthenticated) {
     return (
-      <SettingsLayout title="个人资料">
+      <>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight mb-2">个人资料</h1>
+        <div className="mb-6 h-1 w-16 bg-gradient-to-r from-[#6364FF] to-[#8B83FF] rounded-full" />
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
             <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -172,12 +173,14 @@ export default function ProfileSettingsPage() {
             前往登录
           </Button>
         </div>
-      </SettingsLayout>
+      </>
     );
   }
 
   return (
-    <SettingsLayout title="个人资料">
+    <>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight mb-2">个人资料</h1>
+      <div className="mb-6 h-1 w-16 bg-gradient-to-r from-[#6364FF] to-[#8B83FF] rounded-full" />
       {/* 成功提示 Toast */}
       {showSuccessToast && (
         <div className="fixed top-4 right-4 z-50 animate-slideDown">
@@ -521,6 +524,6 @@ export default function ProfileSettingsPage() {
           </Button>
         </div>
       </Card>
-    </SettingsLayout>
+    </>
   );
 }

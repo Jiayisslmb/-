@@ -1,9 +1,10 @@
-import SettingsLayout from '@/components/layout/SettingsLayout';
 import Card from '@/components/ui/Card';
 
 export default function AboutPage() {
   return (
-    <SettingsLayout title="关于">
+    <>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight mb-2">关于</h1>
+      <div className="mb-6 h-1 w-16 bg-gradient-to-r from-[#6364FF] to-[#8B83FF] rounded-full" />
       <div className="space-y-6">
         {/* 关于 DeSocial */}
         <Card className="border-[var(--mastodon-border)] shadow-sm overflow-hidden">
@@ -122,6 +123,6 @@ export default function AboutPage() {
           </div>
         </Card>
       </div>
-    </SettingsLayout>
+    </>
   );
 }

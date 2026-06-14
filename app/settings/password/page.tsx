@@ -8,7 +8,6 @@ import { useAuth } from '@/lib/auth';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import SettingsLayout from '@/components/layout/SettingsLayout';
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -108,7 +107,9 @@ export default function ChangePasswordPage() {
 
   if (!isAuthenticated) {
     return (
-      <SettingsLayout title="修改密码">
+      <>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight mb-2">修改密码</h1>
+        <div className="mb-6 h-1 w-16 bg-gradient-to-r from-[#6364FF] to-[#8B83FF] rounded-full" />
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
             <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,12 +121,14 @@ export default function ChangePasswordPage() {
             前往登录
           </Button>
         </div>
-      </SettingsLayout>
+      </>
     );
   }
 
   return (
-    <SettingsLayout title="修改密码">
+    <>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight mb-2">修改密码</h1>
+      <div className="mb-6 h-1 w-16 bg-gradient-to-r from-[#6364FF] to-[#8B83FF] rounded-full" />
       {successMessage && (
         <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-6 py-3 rounded-xl flex items-center gap-3">
           <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -215,6 +218,6 @@ export default function ChangePasswordPage() {
           </div>
         </form>
       </Card>
-    </SettingsLayout>
+    </>
   );
 }
