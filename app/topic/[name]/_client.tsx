@@ -17,7 +17,7 @@ interface Topic {
   createdAt: string;
 }
 
-export function TopicPage() {
+export default function TopicPage() {
   const params = useParams();
   const router = useRouter();
   const topicName = params.name as string;

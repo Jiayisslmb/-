@@ -1,4 +1,4 @@
-import { TopicPage } from './_client';
+import TopicPage from './_client';
 
 export default function Page() {
   return <TopicPage />;
