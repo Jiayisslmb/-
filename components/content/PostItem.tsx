@@ -430,7 +430,7 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
   return (
     <Card hoverable className="mb-4 overflow-hidden">
       {/* ═══ 头部：头像 + 用户名·昵称 + 圈子标签 + 发布时间 + 可见度 ═══ */}
-      <div className="flex items-center gap-3 px-5 pt-5 pb-3">
+      <div className="flex items-center gap-3 px-3 sm:px-5 pt-5 pb-3">
         <LinkWithBack
           href={`/profile/${post.author.username}`}
           className="flex-shrink-0"
@@ -543,7 +543,7 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
       </div>
 
       {/* ═══ 中部：标题 + 正文 + 媒体 + 标签 ═══ */}
-      <div className="px-5 pb-3">
+      <div className="px-3 sm:px-5 pb-3">
         {/* 标题 (18px bold) */}
         {isArticle && post.title && (
           <LinkWithBack href={`/content/article/${post.id}`} className="block group mb-2">
@@ -573,7 +573,7 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
           </div>
         ) : (
           <LinkWithBack href={`/content/${isArticle ? 'article' : 'moment'}/${post.id}`} className="block group mb-2">
-            <p className={`text-sm text-gray-700 leading-relaxed group-hover:text-gray-900 transition-colors ${contentExpanded ? '' : 'line-clamp-3'}`}>
+            <p className={`text-sm text-gray-700 leading-relaxed break-words group-hover:text-gray-900 transition-colors ${contentExpanded ? '' : 'line-clamp-3'}`}>
               {stripMarkdown(post.content)}
             </p>
             {post.content && post.content.length > 200 && (
@@ -593,7 +593,7 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
             <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={post.mediaUrl || post.mediaCid || ''}
+                src={post.mediaUrl || getIPFSUrl(post.mediaCid) || ''}
                 alt="media"
                 className="absolute inset-0 w-full h-full object-cover"
                 loading="lazy"

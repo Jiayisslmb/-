@@ -3,7 +3,10 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 export const IPFS_GATEWAYS = [
-  'http://blush-managing-swallow-349.mypinata.cloud/ipfs/',
+  'https://blush-managing-swallow-349.mypinata.cloud/ipfs/',
+  'https://gateway.pinata.cloud/ipfs/',
+  'https://ipfs.io/ipfs/',
+  'https://cloudflare-ipfs.com/ipfs/',
 ];
 
 const currentGatewayIndex = 0;

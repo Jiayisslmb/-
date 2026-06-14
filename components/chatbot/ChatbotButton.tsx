@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useChatbot } from './ChatbotProvider';
+import { useAuth } from '@/lib/auth';
 import ChatbotPanel from './ChatbotPanel';
 
 interface Position {
@@ -10,7 +11,11 @@ interface Position {
 }
 
 export default function ChatbotButton() {
+  const { isAuthenticated } = useAuth();
   const { isOpen, togglePanel } = useChatbot();
+
+  // 未登录不显示 AI 助手
+  if (!isAuthenticated) return null;
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dragRef = useRef<{ startX: number; startY: number; startLeft: number; startTop: number; dragging: boolean }>({
     startX: 0,
