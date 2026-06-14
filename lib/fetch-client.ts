@@ -86,6 +86,15 @@ async function refreshAccessToken(): Promise<boolean> {
     if (data.refreshToken) {
       localStorage.setItem('refreshToken', data.refreshToken);
     }
+
+    // 同步更新 WebSocket 的 Token，避免重连时使用过期 Token
+    try {
+      const { chatClient } = await import('@/lib/chat');
+      chatClient.updateToken(data.accessToken);
+    } catch {
+      // chatClient 可能未加载（服务端渲染等场景），忽略
+    }
+
     return true;
   } catch {
     return false;

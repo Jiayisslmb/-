@@ -65,6 +65,8 @@ class ChatClient {
   private heartbeatInterval: number = 30000;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private lastPing: number = 0;
+  private currentToken: string | null = null;
+  private tokenRefreshing: boolean = false;
   private connectionState: ConnectionState = {
     isConnected: false,
     isConnecting: false,
@@ -92,7 +94,28 @@ class ChatClient {
   private connectionResolver: ((value: { userId: number; username: string; unreadCount: number; onlineUsers: number[] }) => void) | null = null;
   private connectionRejecter: ((reason: Error) => void) | null = null;
 
-  connect(token: string): Promise<{ userId: number; username: string; unreadCount: number; onlineUsers: number[] }> {
+  // 动态获取当前 Token（支持过期后自动刷新）
+  private getToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('token');
+  }
+
+  // 外部调用：更新 Token（Token 刷新后同步）
+  updateToken(newToken: string): void {
+    this.currentToken = newToken;
+    // 如果当前已连接，更新 socket auth 中的 token
+    if (this.socket && 'auth' in this.socket) {
+      (this.socket as any).auth = { token: newToken };
+    }
+  }
+
+  connect(token?: string): Promise<{ userId: number; username: string; unreadCount: number; onlineUsers: number[] }> {
+    const activeToken = token || this.getToken();
+    if (!activeToken) {
+      return Promise.reject(new Error('未登录，无法连接'));
+    }
+    this.currentToken = activeToken;
+
     if (this.socket?.connected) {
       return Promise.resolve({ userId: 0, username: '', unreadCount: 0, onlineUsers: Array.from(this.onlineUsers) });
     }
@@ -111,14 +134,13 @@ class ChatClient {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
       const isRelative = apiUrl.startsWith('/');
       const socketNamespace = '/api/chat';
-      // 生产环境直连 api.desocial.top 绕过 Cloudflare 代理（避免 socket.io 路径被拦截）
       const socketUrl = isRelative
         ? `https://api.desocial.top${socketNamespace}`
         : `${apiUrl.replace('/api', '')}${socketNamespace}`;
 
       try {
         this.socket = io(socketUrl, {
-          auth: { token },
+          auth: { token: activeToken },
           path: '/api/socket.io',
           transports: ['polling'],
           reconnection: true,
@@ -136,7 +158,6 @@ class ChatClient {
         this.lastPing = Date.now();
         this.flushPendingMessages();
         this.updateConnectionState();
-        // Heartbeat starts after 'connected' event with server-specified interval
       });
 
       this.socket.on('connected', (data: { userId: number; username: string; unreadCount: number; onlineUsers: number[]; heartbeatInterval?: number }) => {
@@ -259,11 +280,41 @@ class ChatClient {
         this.updateConnectionState();
       });
 
-      this.socket.on('error', (error: any) => {
+      this.socket.on('error', async (error: any) => {
         console.error('聊天错误:', error);
-        const errorData = typeof error === 'object' && error !== null 
-          ? error 
+        const errorData = typeof error === 'object' && error !== null
+          ? error
           : { message: String(error) };
+        const code = errorData?.code || errorData?.message;
+
+        // AUTH_INVALID: Token 可能已过期，尝试刷新后重连
+        if (code === 'AUTH_INVALID' || code === 'AUTH_EXPIRED' || code === '认证令牌无效或已过期') {
+          console.log('检测到认证令牌过期，尝试刷新...');
+          if (!this.tokenRefreshing) {
+            this.tokenRefreshing = true;
+            try {
+              const newToken = await this.refreshTokenAndGet();
+              if (newToken && newToken !== this.currentToken) {
+                console.log('Token 已刷新，使用新 Token 重连');
+                this.updateToken(newToken);
+                // 断开旧连接并用新 Token 重连
+                this.socket?.disconnect();
+                this.socket = null;
+                this.isConnected = false;
+                this.isConnecting = false;
+                this.clearConnectionPromise();
+                this.tokenRefreshing = false;
+                // 递归调用 connect 使用新 Token
+                setTimeout(() => this.connect(), 1000);
+                return;
+              }
+            } catch (refreshErr) {
+              console.error('Token 刷新失败:', refreshErr);
+            }
+            this.tokenRefreshing = false;
+          }
+        }
+
         this.errorCallbacks.forEach(cb => cb(errorData));
       });
       } catch (error) {
@@ -276,6 +327,36 @@ class ChatClient {
     });
 
     return this.connectionPromise;
+  }
+
+  // 尝试通过 REST API 刷新 Token
+  private async refreshTokenAndGet(): Promise<string | null> {
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!refreshToken) return null;
+
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api';
+      const res = await fetch(`${apiBase}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!res.ok) return null;
+      const data = await res.json();
+
+      if (data.accessToken) {
+        localStorage.setItem('token', data.accessToken);
+        document.cookie = `token=${data.accessToken}; path=/; max-age=604800; SameSite=Lax`;
+        if (data.refreshToken) {
+          localStorage.setItem('refreshToken', data.refreshToken);
+        }
+        return data.accessToken;
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   private clearConnectionPromise(): void {

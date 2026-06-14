@@ -291,6 +291,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
 
         // 页面刷新后恢复 WebSocket 全局连接
+        chatClient.updateToken(token);
         chatClient.connect(token).catch((err) => {
           console.warn('WebSocket 全局连接恢复失败（页面底部可手动重连）:', err?.message);
         });
@@ -379,7 +380,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('adminSession', data.sessionToken);
       }
 
-      // 登录成功后建立 WebSocket 全局连接
+      // 登录成功后建立 WebSocket 全局连接（传入 Token 确保使用最新值）
+      chatClient.updateToken(token);
       chatClient.connect(token).catch((err) => {
         console.warn('WebSocket 全局连接失败（页面底部可手动重连）:', err?.message);
       });
@@ -448,6 +450,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           document.cookie = `isAdmin=${loginData.user?.isAdmin ? 'true' : 'false'}; path=/; max-age=604800; SameSite=Lax`;
 
           // 注册后建立 WebSocket 全局连接
+          chatClient.updateToken(token);
           chatClient.connect(token).catch((err) => {
             console.warn('WebSocket 全局连接失败（页面底部可手动重连）:', err?.message);
           });
@@ -506,6 +509,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // 管理员登录后建立 WebSocket 全局连接
+      chatClient.updateToken(token);
       chatClient.connect(token).catch((err) => {
         console.warn('WebSocket 全局连接失败（页面底部可手动重连）:', err?.message);
       });
