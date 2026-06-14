@@ -45,10 +45,11 @@ interface UserStats {
 
 interface ProfileLayoutProps {
   children: ReactNode;
-  activeTab: 'posts' | 'works' | 'likes' | 'collections';
+  activeTab?: 'posts' | 'works' | 'likes' | 'collections';
+  hideTabs?: boolean;
 }
 
-export default function ProfileLayout({ children, activeTab }: ProfileLayoutProps) {
+export default function ProfileLayout({ children, activeTab, hideTabs }: ProfileLayoutProps) {
   const params = useParams();
   const router = useRouter();
   const { user: currentUser } = useAuth();
@@ -293,6 +294,7 @@ export default function ProfileLayout({ children, activeTab }: ProfileLayoutProp
 
       <Card className="p-4 sm:p-6">
         {/* 移动端可横向滚动、桌面端正常排列 */}
+        {!hideTabs && (
         <div className="flex border-b mb-4 overflow-x-auto scrollbar-hide -mx-1 px-1">
           <LinkWithBack href={`/profile/${username}`} className={getTabClass('posts')}>
             动态
@@ -307,6 +309,7 @@ export default function ProfileLayout({ children, activeTab }: ProfileLayoutProp
             收藏
           </LinkWithBack>
         </div>
+        )}
 
         {children}
       </Card>

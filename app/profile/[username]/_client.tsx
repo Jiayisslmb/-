@@ -1,336 +1,498 @@
 /**
- * 用户个人主页 - 动态标签页组件
+ * 用户个人主页 - 客户端标签页切换组件
  *
- * 文件功能说明：
- * - 展示指定用户发布的所有动态(Moment)内容
- * - 支持动态的查看、删除和转发功能
- * - 区分本人主页与他人主页（权限控制）
- * - 集成ProfileLayout布局组件保持页面一致性
+ * 核心改进：将 动态/文章/点赞/收藏 标签页切换从 Next.js 路由导航
+ * 改为纯客户端状态切换，避免完整页面重载和冗余数据请求。
  *
- * 页面路由：/profile/[username]
- * 路由参数：username - 目标用户的用户名
+ * ProfileLayout 只挂载一次（不会被重新挂载），标签按钮和内容区
+ * 均在本组件内管理。原有的路由级别页面（posts/page.tsx 等）保
+ * 留不变，供直接 URL 访问使用。
  *
- * 动态特性说明：
- * - 不可关联圈子（与文章Article不同）
- * - 可关联话题标签
- * - 仅出现在个人主页动态列表
- * - 支持三种可见性：public/followers/private
- *
- * 核心功能模块：
- * ┌─────────────────────────────────────────────────────┐
- * │ 数据获取 (Data Fetching)                            │
- * │   1. 通过用户名查询用户ID                           │
- * │   2. 验证是否为本人主页                             │
- * │   3. 获取该用户的所有动态列表                       │
- * ├─────────────────────────────────────────────────────┤
- * │ 状态管理 (State Management)                         │
- * │   - moments: 动态列表数据                          │
- * │   - userId: 目标用户ID                              │
- * │   - isOwnProfile: 是否为本人的主页                   │
- * ├─────────────────────────────────────────────────────┤
- * │ 事件处理 (Event Handlers)                           │
- * │   - handleDeletePost: 删除动态操作                 │
- * │   - handleSharePost: 更新转发计数                  │
- * └─────────────────────────────────────────────────────┘
- *
- * 技术实现要点：
- * - 使用'use client'指令启用客户端渲染
- * - 通过useParams()获取动态路由参数
- * - 使用localStorage存储认证信息（Token、UserId）
- * - API调用使用fetch原生API，配合async/await模式
- *
- * 权限控制逻辑：
- * - 本人主页：显示删除按钮，允许删除自己的动态
- * - 他人主页：隐藏删除按钮，仅可查看内容
+ * 数据获取：通过 SWR hooks 进行客户端数据请求，自带缓存、
+ * 去重和错误重试。
  *
  * @module ProfileDetailPage
- * @version 2.0.0
- * @requires React Hooks (useState, useEffect)
- * @requires Next.js Routing (useParams, Link)
- * @requires PostItem 帖子展示组件
- * @requires ProfileLayout 个人主页布局组件
  */
-
-//个人主页 - 动态标签页
-// 展示用户的动态(Moment)内容
-// 动态特性：不可关联圈子、可关联话题、仅出现在个人主页、支持可见度
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, Suspense, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import LinkWithBack from '@/components/common/LinkWithBack';
-import Button from '@/components/ui/Button';
+import useSWR, { useSWRConfig } from 'swr';
 import PostItem from '@/components/content/PostItem';
 import ProfileLayout from '@/components/profile/ProfileLayout';
 import { getIPFSUrl } from '@/lib/ipfs';
+import {
+  fetcher,
+  defaultConfig,
+  useMoments,
+  useUserByUsername,
+} from '@/lib/swr-config';
 
-/**
- * API基础URL配置
- *
- * @constant {string} API_URL
- * @description 从环境变量读取后端API地址
- * 默认值：http://localhost:3001/api（开发环境）
- *
- * @env NEXT_PUBLIC_API_URL 生产环境应通过此变量配置
- */
+/* ================================================================
+   类型定义 — 匹配后端 API 实际返回的数据形状
+   （区别于 @/types 中的 DTO 类型，后者 id 字段为 string）
+   ================================================================ */
 
-/**
- * 动态数据接口定义
- *
- * @interface PostData
- * @description 定义从后端API获取的单条动态数据结构
- *
- * @property {number} id - 动态唯一标识符
- * @property {string} content - 动态正文内容
- * @property {string} [mediaCid] - 媒体文件IPFS CID（可选）
- * @property {string} visibility - 可见性设置 ('public' | 'followers' | 'private')
- * @property {string} createdAt - 创建时间（ISO格式字符串）
- * @property {Object} author - 作者信息对象
- * @property {number} author.id - 作者用户ID
- * @property {string} author.username - 作者用户名
- * @property {string} [author.nickname] - 作者昵称（可选）
- * @property {string} [author.avatarCid] - 作者头像CID（可选）
- * @property {number} likes - 点赞数量
- * @property {number} comments - 评论数量
- * @property {number} shares - 转发数量
- */
-interface PostData {
+interface RawAuthor {
   id: number;
-  content: string;
-  mediaCid?: string;
-  visibility: string;
-  createdAt: string;
-  author: {
-    id: number;
-    username: string;
-    nickname?: string;
-    avatarCid?: string;
-  };
-  likes: number;
-  comments: number;
-  shares: number;
+  username: string;
+  nickname?: string;
+  avatarCid?: string;
 }
 
-/**
- * 用户个人主页主组件
- *
- * @function ProfileDetailPage
- * @returns {JSX.Element} 渲染的个人主页UI
- *
- * @description 这是用户个人主页的核心页面组件，
- * 负责加载和展示指定用户发布的所有动态内容。
- *
- * 组件生命周期：
- * 1. 挂载时：从URL参数获取目标用户名
- * 2. 数据请求：调用API获取用户信息和动态列表
- * 3. 状态更新：将API响应存入本地状态
- * 4. 渲染输出：遍历动态列表渲染PostItem组件
- *
- * @example
- * // 访问路径示例
- * // /profile/john_doe → 展示john_doe的动态
- * // /profile/我的用户名 → 展示当前登录用户的动态
- */
-export function ProfileDetailPage() {
-  /**
-   * 获取URL路由参数
-   *
-   * @constant {ReadonlyURLSearchParams} params
-   * @description 从Next.js Router获取动态路由参数
-   * 包含[username]段的实际值
-   */
-  const params = useParams();
+interface RawPost {
+  id: number;
+  title?: string;
+  content: string;
+  mediaCid?: string;
+  coverCid?: string;
+  visibility: string;
+  createdAt: string;
+  author?: RawAuthor;
+  likes: number;
+  comments: number;
+  shares?: number;
+  circleId?: number;
+  circle?: { id: number; name: string };
+  tags?: string | string[];
+  _type?: 'article' | 'moment';
+}
 
-  /**
-   * 目标用户名
-   *
-   * @constant {string} username
-   * @description 从路由参数中提取的用户名
-   * 用于查询该用户的信息和动态列表
-   */
-  const username = params.username as string;
+type TabKey = 'posts' | 'works' | 'likes' | 'collections';
 
-  /**
-   * 本地状态定义
-   *
-   * @state {PostData[]} moments - 该用户发布的动态列表
-   * @state {number|null} userId - 目标用户的数字ID（初始为null）
-   * @state {boolean} isOwnProfile - 是否为当前登录用户的主页
-   */
-  const [moments, setMoments] = useState<PostData[]>([]);
-  const [userId, setUserId] = useState<number | null>(null);
-  const [isOwnProfile, setIsOwnProfile] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+/* ================================================================
+   PostSkeleton — 加载占位卡片（3 个脉冲动画卡片）
+   ================================================================ */
 
-  useEffect(() => {
-    const fetchMoments = async () => {
+function PostSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[...Array(3)].map((_, i) => (
+        <div
+          key={i}
+          className="bg-white rounded-xl p-4 shadow-sm animate-pulse"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-24 bg-gray-200 rounded" />
+              <div className="h-3 w-16 bg-gray-200 rounded" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="h-4 w-full bg-gray-200 rounded" />
+            <div className="h-4 w-3/4 bg-gray-200 rounded" />
+            <div className="h-20 w-full bg-gray-200 rounded mt-2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ================================================================
+   工具函数 — 将后端返回的原始数据映射为 PostItem props 格式
+   ================================================================ */
+
+function mapRawToPostItem(
+  raw: RawPost,
+  type?: 'article' | 'moment',
+) {
+  const resolvedType =
+    type || raw._type || (raw.title ? 'article' : 'moment');
+
+  return {
+    id: String(raw.id),
+    author: {
+      id: String(raw.author?.id ?? 0),
+      username: raw.author?.username ?? '未知用户',
+      nickname: raw.author?.nickname,
+      avatar: getIPFSUrl(raw.author?.avatarCid),
+    },
+    title: raw.title,
+    content: raw.content,
+    type: resolvedType,
+    mediaUrl: getIPFSUrl(raw.mediaCid || raw.coverCid),
+    mediaCid: getIPFSUrl(raw.mediaCid || raw.coverCid),
+    likes: raw.likes ?? 0,
+    comments: raw.comments ?? 0,
+    shares: raw.shares ?? 0,
+    visibility: raw.visibility as 'public' | 'followers' | 'private',
+    createdAt: raw.createdAt,
+    tags: raw.tags
+      ? typeof raw.tags === 'string'
+        ? raw.tags.split(',').filter(Boolean)
+        : raw.tags
+      : [],
+    circleId: raw.circleId,
+    circleName: raw.circle?.name,
+  };
+}
+
+/* ================================================================
+   标签页组件
+   ================================================================ */
+
+/** 动态标签页 */
+function PostsTab({
+  userId,
+  isOwnProfile,
+  username,
+}: {
+  userId: string;
+  isOwnProfile: boolean;
+  username: string;
+}) {
+  const { data: moments, error, isLoading } = useMoments(userId);
+  const { mutate } = useSWRConfig();
+
+  const handleDeletePost = useCallback(
+    async (postId: string) => {
       try {
-        setLoading(true);
-        setError(null);
-        const userRes = await fetch(`/api/users/username/${username}`);
-        if (!userRes.ok) {
-          if (userRes.status === 404) {
-            setError('该用户不存在或已注销');
-          } else {
-            setError('加载用户信息失败');
-          }
-          return;
-        }
-
-        const userData = await userRes.json();
-        setUserId(userData.id);
-
-        const currentUserId = localStorage.getItem('userId');
-        setIsOwnProfile(String(userData.id) === currentUserId);
-
-        const momentsRes = await fetch(`/api/content/moments/user/${userData.id}`);
-        if (momentsRes.ok) {
-          setMoments(await momentsRes.json());
+        const res = await fetch(`/api/content/moments/${postId}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        if (res.ok) {
+          mutate(`/content/moments/user/${userId}`);
         }
       } catch (err) {
-        console.error('获取动态失败:', err);
-        setError('网络错误，请稍后重试');
-      } finally {
-        setLoading(false);
+        console.error('删除动态失败:', err);
       }
-    };
+    },
+    [userId, mutate],
+  );
 
-    if (username) {
-      fetchMoments();
-    }
-  }, [username]);
-
-  /**
-   * 删除动态处理函数
-   *
-   * @async
-   * @function handleDeletePost
-   * @param {string} postId - 要删除的动态ID
-   * @returns {Promise<void>}
-   *
-   * @description 执行以下步骤：
-   * 1. 发送DELETE请求到后端API
-   * 2. 携带Authorization头进行身份验证
-   * 3. 如果删除成功，从本地状态中移除该条动态
-   * 4. 触发UI自动更新（React状态驱动渲染）
-   *
-   * @permission 权限要求：
-   * - 只有动态作者本人才能删除
-   * - 后端会验证Token对应的用户身份
-   *
-   * @error 错误处理：
-   * - 删除失败时仅在控制台输出错误
-   * - 不向用户显示错误提示（可优化）
-   */
-  const handleDeletePost = async (postId: string) => {
-    try {
-      const response = await fetch(`/api/content/moments/${postId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+  const handleShare = useCallback(
+    (postId: string, newShares: number) => {
+      mutate(
+        `/content/moments/user/${userId}`,
+        (data: RawPost[] | undefined) => {
+          if (!data) return data;
+          return data.map((item) =>
+            String(item.id) === postId
+              ? { ...item, shares: newShares }
+              : item,
+          );
         },
-      });
+        false,
+      );
+    },
+    [userId, mutate],
+  );
 
-      if (response.ok) {
-        // 从状态数组中移除已删除的动态
-        setMoments(prev => prev.filter(m => String(m.id) !== postId));
-      }
-    } catch (err) {
-      console.error('删除动态失败:', err);
-    }
-  };
+  if (isLoading) return <PostSkeleton />;
 
-  /**
-   * 更新转发计数处理函数
-   *
-   * @function handleSharePost
-   * @param {string} postId - 被转发的动态ID
-   * @param {number} newShares - 更新后的转发总数
-   * @returns {void}
-   *
-   * @description 当用户转发某条动态后，
-   * 由PostItem组件回调此函数更新本地的转发计数。
-   *
-   * 实现原理：
-   * - 使用map遍历moments数组
-   * - 匹配目标动态ID（注意类型转换：String(m.id) === postId）
-   * - 创建新对象更新shares字段（不可变更新模式）
-   * - 其他动态保持原样返回
-   *
-   * @note 为什么需要类型转换？
-   * - postId是字符串类型（来自PostItem props）
-   * - m.id是数字类型（来自API响应）
-   * - 必须统一类型才能正确比较
-   */
-  const handleSharePost = (postId: string, newShares: number) => {
-    setMoments(prev => prev.map(m =>
-      String(m.id) === postId
-        ? { ...m, shares: newShares }
-        : m
-    ));
-  };
+  if (error) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        加载失败，请稍后重试
+      </div>
+    );
+  }
+
+  const list = Array.isArray(moments) ? moments : [];
+
+  if (list.length === 0) {
+    return (
+      <div className="text-center text-gray-600 py-8">
+        <p>暂无动态</p>
+      </div>
+    );
+  }
 
   return (
-    <ProfileLayout activeTab="posts">
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6364FF]" />
-        </div>
-      ) : error ? (
-        <div className="text-center py-12">
-          <p className="text-gray-400 text-lg mb-4">😔</p>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <Link href="/"><Button variant="primary">返回首页</Button></Link>
-        </div>
-      ) : moments.length > 0 ? (
-        <div className="space-y-4">
-          {moments.slice(0, 5).map((moment) => {
-            const author = moment.author || {
-              id: userId,
-              username: username,
-              avatarCid: undefined,
-            };
-            return (
-              <PostItem
-                key={moment.id}
-                post={{
-                  id: String(moment.id),
-                  author: {
-                    id: String(author.id),
-                    username: author.username,
-                    nickname: author.nickname,
-                    avatar: getIPFSUrl(author.avatarCid),
-                  },
-                  content: moment.content,
-                  type: 'moment',
-                  mediaUrl: getIPFSUrl(moment.mediaCid),
-                  likes: moment.likes || 0,
-                  comments: moment.comments || 0,
-                  shares: moment.shares || 0,
-                  visibility: moment.visibility as 'public' | 'followers',
-                  createdAt: moment.createdAt,
-                  tags: [],
-                }}
-                onDelete={isOwnProfile ? handleDeletePost : undefined}
-                onShare={handleSharePost}
+    <div className="space-y-4">
+      {list.map((raw: any) => (
+        <PostItem
+          key={raw.id}
+          post={mapRawToPostItem(raw as RawPost, 'moment')}
+          onDelete={isOwnProfile ? handleDeletePost : undefined}
+          onShare={handleShare}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** 文章标签页 */
+function WorksTab({
+  userId,
+  username,
+}: {
+  userId: string;
+  username: string;
+}) {
+  const {
+    data: articles,
+    error,
+    isLoading,
+  } = useSWR<RawPost[]>(
+    userId ? `/content/articles/user/${userId}` : null,
+    fetcher,
+    defaultConfig,
+  );
+  const { mutate } = useSWRConfig();
+
+  const handleShare = useCallback(
+    (postId: string, newShares: number) => {
+      mutate(
+        `/content/articles/user/${userId}`,
+        (data: RawPost[] | undefined) => {
+          if (!data) return data;
+          return data.map((item) =>
+            String(item.id) === postId
+              ? { ...item, shares: newShares }
+              : item,
+          );
+        },
+        false,
+      );
+    },
+    [userId, mutate],
+  );
+
+  if (isLoading) return <PostSkeleton />;
+
+  if (error) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        加载失败，请稍后重试
+      </div>
+    );
+  }
+
+  const list = Array.isArray(articles) ? articles : [];
+
+  if (list.length === 0) {
+    return (
+      <div className="text-center text-gray-600 py-8">
+        <p>暂无文章</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {list
+        .filter((a) => a.author)
+        .map((raw) => (
+          <PostItem
+            key={raw.id}
+            post={mapRawToPostItem(raw, 'article')}
+            onShare={handleShare}
+          />
+        ))}
+    </div>
+  );
+}
+
+/** 点赞标签页 — 合并用户点赞的文章和动态 */
+function LikesTab({ userId }: { userId: string }) {
+  const { data: articleLikes, isLoading: alLoading } = useSWR<RawPost[]>(
+    userId ? `/content/articles/user/${userId}/likes` : null,
+    fetcher,
+    defaultConfig,
+  );
+  const { data: momentLikes, isLoading: mlLoading } = useSWR<RawPost[]>(
+    userId ? `/content/moments/user/${userId}/likes` : null,
+    fetcher,
+    defaultConfig,
+  );
+
+  const isLoading = alLoading || mlLoading;
+
+  if (isLoading) return <PostSkeleton />;
+
+  const combined: RawPost[] = [
+    ...(Array.isArray(articleLikes)
+      ? articleLikes.map((p) => ({ ...p, _type: 'article' as const }))
+      : []),
+    ...(Array.isArray(momentLikes)
+      ? momentLikes.map((p) => ({ ...p, _type: 'moment' as const }))
+      : []),
+  ];
+
+  combined.sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
+  if (combined.length === 0) {
+    return (
+      <div className="text-center text-gray-600 py-8">
+        <p>暂无点赞内容</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {combined.map((raw: any) => (
+        <PostItem
+          key={`${raw._type || 'item'}-${raw.id}`}
+          post={mapRawToPostItem(raw as RawPost)}
+          onShare={() => {}}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** 收藏标签页 — 合并用户收藏的文章和动态 */
+function CollectionsTab({ userId }: { userId: string }) {
+  const { data: articleCols, isLoading: acLoading } = useSWR<RawPost[]>(
+    userId ? `/content/articles/user/${userId}/collections` : null,
+    fetcher,
+    defaultConfig,
+  );
+  const { data: momentCols, isLoading: mcLoading } = useSWR<RawPost[]>(
+    userId ? `/content/moments/user/${userId}/collections` : null,
+    fetcher,
+    defaultConfig,
+  );
+
+  const isLoading = acLoading || mcLoading;
+
+  if (isLoading) return <PostSkeleton />;
+
+  const combined: RawPost[] = [
+    ...(Array.isArray(articleCols)
+      ? articleCols.map((p) => ({ ...p, _type: 'article' as const }))
+      : []),
+    ...(Array.isArray(momentCols)
+      ? momentCols.map((p) => ({ ...p, _type: 'moment' as const }))
+      : []),
+  ];
+
+  combined.sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
+  if (combined.length === 0) {
+    return (
+      <div className="text-center text-gray-600 py-8">
+        <p>暂无收藏内容</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {combined.map((raw: RawPost) => {
+        if (!raw.author) return null;
+        return (
+          <PostItem
+            key={`${raw._type || 'item'}-${raw.id}`}
+            post={mapRawToPostItem(raw)}
+            onShare={() => {}}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+/* ================================================================
+   主组件 — ProfileDetailPage
+   ================================================================ */
+
+export function ProfileDetailPage() {
+  const params = useParams();
+  const username = (params.username as string) || '';
+
+  /* ---- 客户端标签页状态 ---- */
+  const [activeTab, setActiveTab] = useState<TabKey>('posts');
+
+  /* ---- 通过 SWR 获取目标用户 ID ---- */
+  const { data: userData } = useUserByUsername(username || null);
+  const userId: string | null = userData?.id ? String(userData.id) : null;
+
+  /* ---- 判断是否本人主页 ---- */
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
+  useEffect(() => {
+    if (!userId) return;
+    const currentUserId =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('userId')
+        : null;
+    setIsOwnProfile(String(userId) === currentUserId);
+  }, [userId]);
+
+  /* ---- 标签按钮样式（与 ProfileLayout 内置 getTabClass 完全一致） ---- */
+  const getTabClass = (tab: TabKey) => {
+    const base =
+      'px-3 sm:px-5 py-3 border-b-2 transition-all duration-200 font-medium text-sm sm:text-base flex-shrink-0 bg-transparent border-t-0 border-l-0 border-r-0 cursor-pointer';
+    return activeTab === tab
+      ? `${base} border-[#6364FF] text-[#6364FF]`
+      : `${base} border-transparent text-gray-600 hover:text-[#6364FF] hover:border-gray-200`;
+  };
+
+  /* ---- 渲染 ---- */
+  return (
+    <ProfileLayout activeTab={activeTab} hideTabs>
+      {/* ===== 客户端标签按钮（替代路由导航 Link） ===== */}
+      <div className="flex border-b mb-4 overflow-x-auto scrollbar-hide -mx-1 px-1">
+        <button
+          onClick={() => setActiveTab('posts')}
+          className={getTabClass('posts')}
+        >
+          动态
+        </button>
+        <button
+          onClick={() => setActiveTab('works')}
+          className={getTabClass('works')}
+        >
+          文章
+        </button>
+        <button
+          onClick={() => setActiveTab('likes')}
+          className={getTabClass('likes')}
+        >
+          点赞
+        </button>
+        <button
+          onClick={() => setActiveTab('collections')}
+          className={getTabClass('collections')}
+        >
+          收藏
+        </button>
+      </div>
+
+      {/* ===== 标签内容区 ===== */}
+      {userId ? (
+        <>
+          {activeTab === 'posts' && (
+            <Suspense fallback={<PostSkeleton />}>
+              <PostsTab
+                userId={userId}
+                isOwnProfile={isOwnProfile}
+                username={username}
               />
-            );
-          })}
-          {moments.length > 5 && (
-            <div className="text-center pt-4">
-              <LinkWithBack href={`/profile/${username}/posts`}>
-                <Button variant="secondary">查看全部 {moments.length} 条动态</Button>
-              </LinkWithBack>
-            </div>
+            </Suspense>
           )}
-        </div>
+          {activeTab === 'works' && (
+            <Suspense fallback={<PostSkeleton />}>
+              <WorksTab userId={userId} username={username} />
+            </Suspense>
+          )}
+          {activeTab === 'likes' && (
+            <Suspense fallback={<PostSkeleton />}>
+              <LikesTab userId={userId} />
+            </Suspense>
+          )}
+          {activeTab === 'collections' && (
+            <Suspense fallback={<PostSkeleton />}>
+              <CollectionsTab userId={userId} />
+            </Suspense>
+          )}
+        </>
       ) : (
-        <div className="text-center text-gray-600 py-8">
-          <p>暂无动态</p>
-        </div>
+        <PostSkeleton />
       )}
     </ProfileLayout>
   );

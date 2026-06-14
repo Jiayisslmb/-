@@ -14,7 +14,7 @@ export default function ChatbotPanel() {
     setMode,
   } = useChatbot();
   const bottomRef = useRef<HTMLDivElement>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });

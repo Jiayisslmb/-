@@ -1,5 +1,3 @@
-//话题详情页面
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,7 +7,7 @@ import Button from '@/components/ui/Button';
 import PostItem, { Post } from '@/components/content/PostItem';
 import Link from 'next/link';
 import { getIPFSUrl } from '@/lib/ipfs';
-
+import { request, ApiError } from '@/lib/fetch-client';
 
 interface Topic {
   id: number;
@@ -23,7 +21,7 @@ export function TopicPage() {
   const params = useParams();
   const router = useRouter();
   const topicName = params.name as string;
-  
+
   const [topic, setTopic] = useState<Topic | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,37 +31,17 @@ export function TopicPage() {
     const fetchTopicData = async () => {
       try {
         setLoading(true);
-        
-        const topicRes = await fetch(`/api/topics/${encodeURIComponent(topicName)}`);
-        if (!topicRes.ok) {
+        setError('');
+
+        // Use unified request() instead of manual fetch + text + JSON.parse
+        const topicData = await request<any>(`/topics/${encodeURIComponent(topicName)}`);
+
+        if (!topicData || !topicData.id) {
           setError('话题不存在');
           setLoading(false);
           return;
         }
-        
-        const text = await topicRes.text();
-        if (!text) {
-          setError('话题不存在');
-          setLoading(false);
-          return;
-        }
-        
-        let topicData;
-        try {
-          topicData = JSON.parse(text);
-        } catch (parseError) {
-          console.error('JSON解析失败:', parseError);
-          setError('数据格式错误');
-          setLoading(false);
-          return;
-        }
-        
-        if (!topicData) {
-          setError('话题不存在');
-          setLoading(false);
-          return;
-        }
-        
+
         setTopic({
           id: topicData.id,
           name: topicData.name,
@@ -74,17 +52,22 @@ export function TopicPage() {
 
         const allPosts: Post[] = [];
 
-        if (topicData.articletopic && Array.isArray(topicData.articletopic)) {
-          topicData.articletopic.forEach((at: any) => {
+        // Handle article topics — array may be undefined/missing
+        const articleTopics = topicData.articletopic;
+        if (articleTopics && Array.isArray(articleTopics)) {
+          for (const at of articleTopics) {
             const article = at.article;
-            if (!article) return;
+            if (!article) continue;
+            // Filter out posts where author is null/missing
+            if (!article.user || !article.user.id) continue;
+
             allPosts.push({
               id: String(article.id),
               author: {
-                id: String(article.user?.id || 0),
-                username: article.user?.username || '未知用户',
-                nickname: article.user?.nickname,
-                avatar: getIPFSUrl(article.user?.avatarCid),
+                id: String(article.user.id),
+                username: article.user.username || '未知用户',
+                nickname: article.user.nickname,
+                avatar: getIPFSUrl(article.user.avatarCid),
               },
               title: article.title,
               content: article.content,
@@ -95,24 +78,33 @@ export function TopicPage() {
               shares: article.articlerepost?.length || 0,
               visibility: (article.visibility || 'public') as 'public' | 'followers',
               createdAt: article.createdAt,
-              tags: article.tags ? (typeof article.tags === 'string' ? article.tags.split(',').filter(Boolean) : article.tags) : [],
+              tags: article.tags
+                ? typeof article.tags === 'string'
+                  ? article.tags.split(',').filter(Boolean)
+                  : article.tags
+                : [],
               circleId: article.circleId ? Number(article.circleId) : undefined,
               circleName: article.circle?.name,
             });
-          });
+          }
         }
 
-        if (topicData.momenttopic && Array.isArray(topicData.momenttopic)) {
-          topicData.momenttopic.forEach((mt: any) => {
+        // Handle moment topics — array may be undefined/missing
+        const momentTopics = topicData.momenttopic;
+        if (momentTopics && Array.isArray(momentTopics)) {
+          for (const mt of momentTopics) {
             const moment = mt.moment;
-            if (!moment) return;
+            if (!moment) continue;
+            // Filter out posts where author is null/missing
+            if (!moment.user || !moment.user.id) continue;
+
             allPosts.push({
               id: String(moment.id),
               author: {
-                id: String(moment.user?.id || 0),
-                username: moment.user?.username || '未知用户',
-                nickname: moment.user?.nickname,
-                avatar: getIPFSUrl(moment.user?.avatarCid),
+                id: String(moment.user.id),
+                username: moment.user.username || '未知用户',
+                nickname: moment.user.nickname,
+                avatar: getIPFSUrl(moment.user.avatarCid),
               },
               content: moment.content,
               type: 'moment',
@@ -124,13 +116,23 @@ export function TopicPage() {
               createdAt: moment.createdAt,
               tags: [],
             });
-          });
+          }
         }
 
-        allPosts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        allPosts.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
         setPosts(allPosts);
       } catch (err) {
-        setError('加载失败');
+        if (err instanceof ApiError) {
+          if (err.status === 404) {
+            setError('话题不存在');
+          } else {
+            setError(`加载失败：${err.message}`);
+          }
+        } else {
+          setError('网络连接失败，请检查网络后重试');
+        }
         console.error('加载话题失败:', err);
       } finally {
         setLoading(false);
@@ -164,19 +166,33 @@ export function TopicPage() {
   }
 
   const handleShare = (postId: string, newShares: number) => {
-    setPosts(prev => prev.map(post =>
-      post.id === postId
-        ? { ...post, shares: newShares }
-        : post
-    ));
+    setPosts((prev) =>
+      prev.map((post) =>
+        post.id === postId ? { ...post, shares: newShares } : post,
+      ),
+    );
   };
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6">
       <div className="mb-6">
-        <Link href="/search" className="inline-flex items-center gap-2 text-gray-600 hover:text-[#6364FF] transition-all mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        <Link
+          href="/search"
+          className="inline-flex items-center gap-2 text-gray-600 hover:text-[#6364FF] transition-all mb-4"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
           </svg>
           返回搜索
         </Link>
@@ -186,7 +202,9 @@ export function TopicPage() {
         <div>
           <div className="flex items-center gap-3 mb-3">
             <span className="text-4xl">#</span>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{topic?.name}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+              {topic?.name}
+            </h1>
           </div>
           <div className="mt-2 h-1 w-16 bg-gradient-to-r from-[#6364FF] to-[#8B83FF] rounded-full"></div>
           {topic?.description && (
@@ -194,14 +212,16 @@ export function TopicPage() {
           )}
           <div className="flex items-center gap-4 mt-4 text-sm text-gray-500">
             <span>{topic?.postCount} 条帖子</span>
-            <span>创建于 {new Date(topic?.createdAt || '').toLocaleDateString()}</span>
+            <span>
+              创建于 {new Date(topic?.createdAt || '').toLocaleDateString()}
+            </span>
           </div>
-          
+
           <div className="mt-4 pt-4 border-t">
-            <Link href={`/content/create/article?topic=${encodeURIComponent(topicName)}`}>
-              <Button variant="primary">
-                参与话题
-              </Button>
+            <Link
+              href={`/content/create/article?topic=${encodeURIComponent(topicName)}`}
+            >
+              <Button variant="primary">参与话题</Button>
             </Link>
           </div>
         </div>
@@ -209,7 +229,7 @@ export function TopicPage() {
 
       <div className="space-y-4">
         {posts.length > 0 ? (
-          posts.map(post => (
+          posts.map((post) => (
             <PostItem key={post.id} post={post} onShare={handleShare} />
           ))
         ) : (
