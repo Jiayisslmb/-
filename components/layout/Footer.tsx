@@ -25,17 +25,17 @@ export default function Footer() {
             <h4 className="font-semibold text-gray-900 mb-4">平台</h4>
             <ul className="space-y-2.5 text-sm">
               <li>
-                <Link href="#" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
+                <Link href="/settings/about" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
                   关于我们
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
+                <Link href="/settings/about" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
                   联系我们
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
+                <Link href="/settings/about" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
                   博客
                 </Link>
               </li>
@@ -46,17 +46,17 @@ export default function Footer() {
             <h4 className="font-semibold text-gray-900 mb-4">支持</h4>
             <ul className="space-y-2.5 text-sm">
               <li>
-                <Link href="#" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
+                <Link href="/settings/about" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
                   帮助中心
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
+                <Link href="/settings/about" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
                   常见问题
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
+                <Link href="/settings/about" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
                   反馈
                 </Link>
               </li>
@@ -67,17 +67,17 @@ export default function Footer() {
             <h4 className="font-semibold text-gray-900 mb-4">法律</h4>
             <ul className="space-y-2.5 text-sm">
               <li>
-                <Link href="#" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
+                <Link href="/settings/about" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
                   隐私政策
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
+                <Link href="/settings/about" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
                   服务条款
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
+                <Link href="/settings/about" className="text-gray-600 hover:text-[#6364FF] transition-colors duration-200 font-medium">
                   Cookie设置
                 </Link>
               </li>

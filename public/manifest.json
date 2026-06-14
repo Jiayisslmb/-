@@ -1,45 +1,35 @@
 {
-  "name": "去中心化社交平台",
+  "name": "DeSocial - 去中心化社交平台",
   "short_name": "DeSocial",
-  "description": "基于区块链技术的去中心化社交网络",
+  "description": "基于Web3技术的去中心化社交网络，保护用户隐私和数据主权",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#0070f3",
+  "background_color": "#FAFAFA",
+  "theme_color": "#6364FF",
   "icons": [
     {
       "src": "/favicon.ico",
-      "sizes": "48x48 72x72 96x96 128x128 256x256 512x512",
+      "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon",
-      "purpose": "any"
-    },
-    {
-      "src": "/next.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
       "purpose": "any"
     }
   ],
   "orientation": "portrait",
-  "categories": ["social", "communication", "entertainment"],
+  "categories": ["social", "communication"],
   "shortcuts": [
     {
       "name": "发布动态",
       "short_name": "发布",
       "description": "发布新动态",
-      "url": "/?action=create",
-      "icons": [{ "src": "/next.svg", "sizes": "192x192" }]
+      "url": "/?action=create"
     },
     {
       "name": "消息",
       "short_name": "消息",
       "description": "查看消息",
-      "url": "/messages",
-      "icons": [{ "src": "/next.svg", "sizes": "192x192" }]
+      "url": "/messages"
     }
   ],
-  "related_applications": [],
-  "prefer_related_applications": false,
   "lang": "zh-CN",
   "dir": "ltr"
 }

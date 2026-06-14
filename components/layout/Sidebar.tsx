@@ -75,7 +75,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="space-y-4 sticky top-24">
+    <div className="hidden md:block space-y-4 sticky top-24">
       {/* 导航卡片 */}
       <Card className="border-gray-200/80 shadow-sm overflow-hidden">
         <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-[#F9FAFB] to-white">

@@ -12,11 +12,11 @@ export default function Badge({
   children
 }: BadgeProps) {
   const variantClasses = {
-    primary: 'bg-[#F0EFFF] text-[#6364FF]',
+    primary: 'bg-[var(--mastodon-primary-light)] text-[var(--mastodon-primary)]',
     secondary: 'bg-gray-100 text-gray-800',
-    success: 'bg-green-50 text-green-700',
-    warning: 'bg-yellow-50 text-yellow-700',
-    danger: 'bg-red-50 text-red-700'
+    success: 'bg-green-100 text-green-700',
+    warning: 'bg-orange-100 text-orange-700',
+    danger: 'bg-red-100 text-red-700'
   };
 
   const sizeClasses = {

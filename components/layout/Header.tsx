@@ -112,6 +112,7 @@ export default function Header() {
             <input
               type="text"
               placeholder="搜索用户、内容..."
+              aria-label="搜索"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setShowHotSearch(true)}
@@ -157,10 +158,10 @@ export default function Header() {
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         {item.isHot && (
-                          <span className="px-1.5 py-0.5 bg-red-50 text-red-600 text-[10px] font-bold rounded">热</span>
+                          <span aria-label="热门" className="px-1.5 py-0.5 bg-red-50 text-red-600 text-[10px] font-bold rounded">热</span>
                         )}
                         {item.isNew && (
-                          <span className="px-1.5 py-0.5 bg-green-50 text-green-600 text-[10px] font-bold rounded">新</span>
+                          <span aria-label="最新" className="px-1.5 py-0.5 bg-green-50 text-green-600 text-[10px] font-bold rounded">新</span>
                         )}
                         <span className="text-[10px] text-gray-400">{item.searchCount}次</span>
                       </div>
@@ -218,6 +219,8 @@ export default function Header() {
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
                   className="flex items-center gap-2 p-1.5 hover:bg-gray-100 rounded-full transition-all duration-200"
+                  aria-expanded={showDropdown}
+                  aria-haspopup="menu"
                 >
                   <Avatar
                     src={user?.avatarCid ? user.avatar : undefined}

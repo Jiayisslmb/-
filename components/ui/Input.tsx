@@ -16,12 +16,12 @@ export default function Input({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-semibold mb-2 text-gray-900">
+        <label className="block text-sm font-semibold mb-2 text-[var(--mastodon-text-primary)]">
           {label}
         </label>
       )}
       <input
-        className={`w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg 
+        className={`w-full px-4 py-2.5 bg-[var(--mastodon-surface)] border border-[var(--mastodon-border)] rounded-lg
                    focus:outline-none focus:border-[#6364FF] focus:ring-2 focus:ring-[#6364FF]/20
                    placeholder-gray-400 transition-all duration-200
                    hover:border-gray-400

@@ -486,6 +486,33 @@ body {
   }
 }
 
+/* ── Dark mode shadow override ── */
+.dark .shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+.dark .shadow-md { box-shadow: 0 4px 6px rgba(0,0,0,0.4); }
+.dark .shadow-lg { box-shadow: 0 10px 15px rgba(0,0,0,0.5); }
+.dark .card-hover:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
+
+/* ── Dark mode gradient text ── */
+.dark .gradient-text {
+  background: linear-gradient(135deg, var(--mastodon-primary), #a5a4f5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Dark mode ring override ── */
+.dark .ring-2.ring-white { --tw-ring-color: var(--mastodon-border); }
+
+/* ── Dark mode additional overrides ── */
+.dark .bg-gray-50\/50 { background-color: rgba(25, 27, 34, 0.5) !important; }
+.dark .border-gray-100 { border-color: var(--mastodon-border-light) !important; }
+.dark .bg-red-50 { background-color: rgba(255, 59, 48, 0.1) !important; }
+.dark .bg-green-50 { background-color: rgba(0, 200, 83, 0.1) !important; }
+.dark .text-red-700 { color: #ff6b6b !important; }
+.dark .text-green-700 { color: #69db7c !important; }
+.dark .border-red-200 { border-color: rgba(255, 59, 48, 0.2) !important; }
+.dark .border-green-200 { border-color: rgba(0, 200, 83, 0.2) !important; }
+
 /* ── Dense card variant ── */
 .card-dense {
   padding: 0.625rem 0.875rem;
