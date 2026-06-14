@@ -146,15 +146,21 @@ export default function TopicPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center py-12">加载中...</div>
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-48 bg-gray-200 rounded" />
+          <div className="h-4 w-32 bg-gray-200 rounded" />
+          <div className="space-y-3 mt-6">
+            {[1,2,3].map(i => <div key={i} className="h-32 bg-gray-100 rounded-xl" />)}
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-3xl mx-auto px-4 py-8">
         <div className="text-center py-12">
           <p className="text-red-500 mb-4">{error}</p>
           <Button variant="secondary" onClick={() => router.push('/search')}>
