@@ -126,16 +126,20 @@ export function ChatPage() {
           setMessages(formattedMessages);
         }
 
-        if (chatClient.isSocketConnected()) {
-          chatClient.disconnect();
-        }
+        // 检测连接状态：优先复用全局连接，仅在未连接时建立
+        const isConnected = chatClient.isSocketConnected();
+        const connectionState = chatClient.getConnectionState();
 
-        try {
-          await chatClient.connect(token);
-          setConnectionState('connected');
-        } catch (err) {
-          console.error('WebSocket连接失败:', err);
-          setConnectionState('disconnected');
+        if (!isConnected && !connectionState.isConnecting) {
+          try {
+            await chatClient.connect(token);
+            setConnectionState('connected');
+          } catch (err) {
+            console.error('WebSocket连接失败:', err);
+            setConnectionState('disconnected');
+          }
+        } else {
+          setConnectionState(isConnected ? 'connected' : 'connecting');
         }
 
         chatClient.joinConversation(parseInt(otherUserId));

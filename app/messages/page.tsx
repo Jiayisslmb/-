@@ -161,14 +161,18 @@ export default function MessagesPage() {
       return;
     }
 
+    // 检测+兜底连接：优先复用 auth.ts 建立的全局连接
     const connectSocket = async () => {
       try {
+        const isConnected = chatClient.isSocketConnected();
         const connectionState = chatClient.getConnectionState();
-        if (!chatClient.isSocketConnected() && !connectionState.isConnecting) {
+
+        if (!isConnected && !connectionState.isConnecting) {
           await chatClient.connect(token);
           setWsConnected(true);
         } else {
-          setWsConnected(true);
+          // 已连接或正在连接中，直接标记
+          setWsConnected(isConnected);
         }
       } catch (err) {
         console.error('WebSocket连接失败:', err);

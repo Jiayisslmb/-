@@ -287,6 +287,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         localStorage.setItem('userId', String(userData.id));
         setIsLoading(false);
+
+        // 页面刷新后恢复 WebSocket 全局连接
+        chatClient.connect(token).catch((err) => {
+          console.warn('WebSocket 全局连接恢复失败（页面底部可手动重连）:', err?.message);
+        });
       } catch (error: unknown) {
         if (error instanceof ApiError && error.isUnauthorized) {
           localStorage.removeItem('token');
@@ -358,9 +363,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         colorScheme: data.user.colorScheme,
         defaultVisibility: data.user.defaultVisibility,
       });
-      localStorage.setItem('token', data.accessToken || data.token);
+      const token = data.accessToken || data.token;
+      localStorage.setItem('token', token);
       localStorage.setItem('userId', data.user.id.toString());
-      document.cookie = `token=${data.accessToken || data.token}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = `token=${token}; path=/; max-age=604800; SameSite=Lax`;
       document.cookie = `isAdmin=${data.user.isAdmin ? 'true' : 'false'}; path=/; max-age=604800; SameSite=Lax`;
       if (data.refreshToken) {
         localStorage.setItem('refreshToken', data.refreshToken);
@@ -368,6 +374,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.sessionToken) {
         localStorage.setItem('adminSession', data.sessionToken);
       }
+
+      // 登录成功后建立 WebSocket 全局连接
+      chatClient.connect(token).catch((err) => {
+        console.warn('WebSocket 全局连接失败（页面底部可手动重连）:', err?.message);
+      });
     } catch (error) {
       console.error('登录失败:', error);
       throw error;
@@ -425,10 +436,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (loginResponse.ok) {
           const loginData = await loginResponse.json();
-          localStorage.setItem('token', loginData.accessToken || loginData.token);
+          const token = loginData.accessToken || loginData.token;
+          localStorage.setItem('token', token);
           localStorage.setItem('userId', String(loginData.user?.id || ''));
-          document.cookie = `token=${loginData.accessToken || loginData.token}; path=/; max-age=604800; SameSite=Lax`;
+          document.cookie = `token=${token}; path=/; max-age=604800; SameSite=Lax`;
           document.cookie = `isAdmin=${loginData.user?.isAdmin ? 'true' : 'false'}; path=/; max-age=604800; SameSite=Lax`;
+
+          // 注册后建立 WebSocket 全局连接
+          chatClient.connect(token).catch((err) => {
+            console.warn('WebSocket 全局连接失败（页面底部可手动重连）:', err?.message);
+          });
         }
       } catch (error) {
         console.error('注册失败:', error);
@@ -474,13 +491,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         bio: data.user.bio,
         isAdmin: data.user.isAdmin,
       });
-      localStorage.setItem('token', data.accessToken || data.token);
+      const token = data.accessToken || data.token;
+      localStorage.setItem('token', token);
       localStorage.setItem('userId', data.user.id.toString());
-      document.cookie = `token=${data.accessToken || data.token}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = `token=${token}; path=/; max-age=604800; SameSite=Lax`;
       document.cookie = `isAdmin=true; path=/; max-age=604800; SameSite=Lax`;
       if (data.sessionToken) {
         localStorage.setItem('adminSession', data.sessionToken);
       }
+
+      // 管理员登录后建立 WebSocket 全局连接
+      chatClient.connect(token).catch((err) => {
+        console.warn('WebSocket 全局连接失败（页面底部可手动重连）:', err?.message);
+      });
     } catch (error) {
       console.error('管理员登录失败:', error);
       throw error;

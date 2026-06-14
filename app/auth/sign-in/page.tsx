@@ -109,10 +109,13 @@ export default function SignInPage() {
    *   - true: 请求进行中，按钮禁用并显示加载动画
    *   - false: 空闲状态，可以提交表单
    */
+  const [loginMode, setLoginMode] = useState<'password' | 'code'>('password');
   const [requireMfa, setRequireMfa] = useState(false);
-  const [formData, setFormData] = useState({ username: '', password: '', mfaToken: '' });
+  const [formData, setFormData] = useState({ username: '', password: '', mfaToken: '', email: '', code: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [codeCountdown, setCodeCountdown] = useState(0);
 
   /**
    * 表单输入变更处理器
@@ -246,6 +249,71 @@ export default function SignInPage() {
     }
   };
 
+  // 发送邮箱验证码
+  const handleSendCode = async () => {
+    if (!formData.email || !formData.email.includes('@')) {
+      setErrors({ email: '请输入有效的邮箱地址' });
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/send-login-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      });
+      if (res.ok) {
+        setCodeSent(true);
+        setCodeCountdown(60);
+        const timer = setInterval(() => {
+          setCodeCountdown((prev) => {
+            if (prev <= 1) { clearInterval(timer); return 0; }
+            return prev - 1;
+          });
+        }, 1000);
+        setErrors({});
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setErrors({ email: data.message || '发送失败' });
+      }
+    } catch {
+      setErrors({ email: '网络错误，请重试' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 验证码登录
+  const handleCodeLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.code || formData.code.length !== 6) {
+      setErrors({ code: '请输入6位验证码' });
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/login-with-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, code: formData.code }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('token', data.accessToken);
+        localStorage.setItem('userId', String(data.user.id));
+        document.cookie = `token=${data.accessToken}; path=/; max-age=604800; SameSite=Lax`;
+        router.push('/');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setErrors({ code: data.message || '验证码错误' });
+      }
+    } catch {
+      setErrors({ code: '网络错误，请重试' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA] py-12 px-4">
       <div className="w-full max-w-md animate-fadeIn">
@@ -255,6 +323,28 @@ export default function SignInPage() {
         </div>
 
         <Card className="p-8 shadow-sm border-gray-200">
+          {/* 登录方式切换 */}
+          <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
+            <button
+              type="button"
+              onClick={() => { setLoginMode('password'); setErrors({}); }}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all ${
+                loginMode === 'password' ? 'bg-white text-[#6364FF] shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              密码登录
+            </button>
+            <button
+              type="button"
+              onClick={() => { setLoginMode('code'); setErrors({}); }}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all ${
+                loginMode === 'code' ? 'bg-white text-[#6364FF] shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              验证码登录
+            </button>
+          </div>
+
           {errors.submit && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 flex items-start gap-3 animate-slideDown">
               <svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -264,61 +354,118 @@ export default function SignInPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {!requireMfa ? (
-              <>
+          {loginMode === 'password' ? (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {!requireMfa ? (
+                <>
+                  <Input
+                    label="用户名或邮箱"
+                    name="username"
+                    type="text"
+                    placeholder="输入你的用户名或邮箱"
+                    value={formData.username}
+                    onChange={handleChange}
+                    error={errors.username}
+                  />
+
+                  <div>
+                    <Input
+                      label="密码"
+                      name="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={handleChange}
+                      error={errors.password}
+                    />
+                    <div className="text-right mt-1">
+                      <Link href="/auth/forgot-password" className="text-xs text-[#6364FF] hover:underline">
+                        忘记密码？
+                      </Link>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="bg-[#F0EFFF] border border-[#6364FF]/20 text-[#6364FF] px-4 py-4 rounded-xl mb-6 flex items-center gap-3">
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  <span className="font-medium">双因素认证已启用，请输入验证码</span>
+                </div>
+              )}
+
+              {requireMfa && (
                 <Input
-                  label="用户名或邮箱"
-                  name="username"
+                  label="验证码"
+                  name="mfaToken"
                   type="text"
-                  placeholder="输入你的用户名"
-                  value={formData.username}
+                  placeholder="000000"
+                  value={formData.mfaToken}
                   onChange={handleChange}
-                  error={errors.username}
+                  error={errors.mfaToken}
+                  helperText="请打开 Google Authenticator 获取 6 位验证码"
                 />
+              )}
 
-                <Input
-                  label="密码"
-                  name="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={handleChange}
-                  error={errors.password}
-                />
-              </>
-            ) : (
-              <div className="bg-[#F0EFFF] border border-[#6364FF]/20 text-[#6364FF] px-4 py-4 rounded-xl mb-6 flex items-center gap-3">
-                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                <span className="font-medium">双因素认证已启用，请输入验证码</span>
-              </div>
-            )}
-
-            {requireMfa && (
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                isLoading={loading}
+                className="w-full !rounded-xl shadow-md hover:shadow-lg"
+              >
+                登录
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleCodeLogin} className="space-y-5">
               <Input
-                label="验证码"
-                name="mfaToken"
-                type="text"
-                placeholder="000000"
-                value={formData.mfaToken}
+                label="邮箱地址"
+                name="email"
+                type="email"
+                placeholder="输入你的注册邮箱"
+                value={formData.email}
                 onChange={handleChange}
-                error={errors.mfaToken}
-                helperText="请打开 Google Authenticator 获取 6 位验证码"
+                error={errors.email}
               />
-            )}
 
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              isLoading={loading}
-              className="w-full !rounded-xl shadow-md hover:shadow-lg"
-            >
-              登录
-            </Button>
-          </form>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    label="验证码"
+                    name="code"
+                    type="text"
+                    placeholder="6位数字"
+                    value={formData.code}
+                    onChange={handleChange}
+                    error={errors.code}
+                    maxLength={6}
+                  />
+                </div>
+                <div className="pt-7">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleSendCode}
+                    disabled={codeCountdown > 0 || loading}
+                    className="!rounded-lg whitespace-nowrap"
+                  >
+                    {codeCountdown > 0 ? `${codeCountdown}s` : codeSent ? '重新发送' : '获取验证码'}
+                  </Button>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                isLoading={loading}
+                className="w-full !rounded-xl shadow-md hover:shadow-lg"
+              >
+                登录
+              </Button>
+            </form>
+          )}
 
           <div className="mt-6">
             <div className="relative">

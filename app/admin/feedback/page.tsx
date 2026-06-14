@@ -117,7 +117,7 @@ export default function FeedbackPage() {
         <p className="text-white/80 text-lg">处理用户的举报和建议</p>
       </div>
 
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
         {[
           { label: '总举报数', value: reports.length, icon: '📋', gradient: 'from-blue-500 to-cyan-500' },
           { label: '待处理', value: reports.filter(f => f.status === 'pending').length, icon: '⏳', gradient: 'from-red-500 to-orange-500' },

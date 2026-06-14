@@ -225,7 +225,7 @@ export default function StatsPage() {
         <p className="text-white/80 text-lg">平台数据分析和报表</p>
       </div>
 
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
         {stats.map(stat => (
           <Card key={stat.label} className="border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden group">
             <div className="relative">
@@ -280,7 +280,7 @@ export default function StatsPage() {
                 ))}
               </div>
 
-              <div className="mt-4 grid grid-cols-7 gap-2">
+              <div className="mt-4 grid grid-cols-4 md:grid-cols-7 gap-2">
                 {postingStats.map((stat, i) => (
                   <div key={i} className="bg-gray-50 rounded-xl p-2.5 text-center group hover:bg-[#F0EFFF]/30 transition-colors duration-200">
                     <div

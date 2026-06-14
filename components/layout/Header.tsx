@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button';
 import Avatar from '@/components/ui/Avatar';
 import { useState, useEffect, useRef } from 'react';
 import { request } from '@/lib/fetch-client';
+import MobileDrawer from './MobileDrawer';
 
 interface HotSearchItem {
   id: number;
@@ -27,6 +28,7 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showHotSearch, setShowHotSearch] = useState(false);
   const [hotSearches, setHotSearches] = useState<HotSearchItem[]>([]);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const hotSearchFetched = useRef(false);
 
@@ -88,6 +90,17 @@ export default function Header() {
   return (
     <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-4 h-16 flex justify-between items-center">
+        {/* 移动端汉堡菜单按钮 */}
+        <button
+          onClick={() => setMobileDrawerOpen(true)}
+          className="md:hidden p-2 -ml-2 text-gray-600 hover:text-[#6364FF] hover:bg-[#F0EFFF] rounded-lg transition-colors"
+          aria-label="打开菜单"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
         <Link href="/" className="flex items-center group" title="回到首页">
           <span className="text-2xl font-bold bg-gradient-to-r from-[#6364FF] to-[#8B83FF] bg-clip-text text-transparent group-hover:from-[#5558DD] group-hover:to-[#7C7BF7] transition-all duration-300">
             DeSocial
@@ -286,6 +299,12 @@ export default function Header() {
           )}
         </div>
       </div>
+
+      {/* 移动端全屏抽屉菜单 */}
+      <MobileDrawer
+        isOpen={mobileDrawerOpen}
+        onClose={() => setMobileDrawerOpen(false)}
+      />
     </header>
   );
 }

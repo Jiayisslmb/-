@@ -11,9 +11,9 @@ import ConnectionStatusWrapper from '@/components/common/ConnectionStatusWrapper
 import { AuthProvider } from '@/lib/auth';
 import { IPFSProvider } from '@/lib/ipfs';
 import { PreferencesProvider } from '@/lib/preferences';
-import { P2PProvider } from '@/components/p2p/P2PProvider';
 import { ChatbotProvider } from '@/components/chatbot/ChatbotProvider';
-import ChatbotButton from '@/components/chatbot/ChatbotButton';
+import { P2PProviderLoader } from '@/components/p2p/P2PProviderLoader';
+import { ChatbotButtonLoader } from '@/components/chatbot/ChatbotButtonLoader';
 
 export const metadata: Metadata = {
   title: '去中心化个人社交平台',
@@ -32,7 +32,7 @@ export default function RootLayout({
         <ErrorBoundary severity="page">
           <AuthProvider>
             <IPFSProvider>
-              <P2PProvider>
+              <P2PProviderLoader>
                 <PreferencesProvider>
                   <ChatbotProvider>
                     <BackendStatusBanner />
@@ -45,11 +45,11 @@ export default function RootLayout({
                     </main>
                     <Footer />
                     <BottomNav />
-                    <ChatbotButton />
+                    <ChatbotButtonLoader />
                     <ConnectionStatusWrapper />
                   </ChatbotProvider>
                 </PreferencesProvider>
-              </P2PProvider>
+              </P2PProviderLoader>
             </IPFSProvider>
           </AuthProvider>
         </ErrorBoundary>

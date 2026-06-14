@@ -5,16 +5,17 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import type { PostDTO } from '@/types';
 import PostItem, { Post } from './PostItem';
 import { motion, AnimatePresence } from 'framer-motion';
 import { request } from '@/lib/fetch-client';
 import { getIPFSUrl } from '@/lib/ipfs';
 import { ListSkeleton } from '@/components/ui/Skeleton';
-import { EmptyState, ErrorState } from '@/components/common/StateRenderer';
+import { EmptyState } from '@/components/common/StateRenderer';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { stagger, staggerItem } from '@/lib/animations';
+import useSWRInfinite from 'swr/infinite';
 
 interface ContentFeedProps {
   type?: 'recommended' | 'following' | 'user' | 'search' | 'circle';
@@ -55,65 +56,124 @@ function mapApiPost(item: Record<string, unknown>): Post {
   };
 }
 
+const PAGE_SIZE_FIRST = 5;
+const PAGE_SIZE = 10;
+
+function getEndpoint(type: string, userId?: string, searchQuery?: string, circleId?: string) {
+  if (type === 'user' && userId) return `/content/articles/user/${userId}`;
+  if (type === 'search' && searchQuery) return `/content/search?q=${encodeURIComponent(searchQuery)}`;
+  if (type === 'circle' && circleId) return `/circles/${circleId}/posts`;
+  return '/content/articles/feed';
+}
+
 export default function ContentFeed({ type = 'recommended', userId, searchQuery, circleId }: ContentFeedProps) {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const fetchPosts = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      let endpoint = '/content/articles/feed';
+  const getKey = useCallback(
+    (pageIndex: number, previousPageData: Post[] | null) => {
+      if (previousPageData && previousPageData.length === 0) return null; // reached end
+      const take = pageIndex === 0 ? PAGE_SIZE_FIRST : PAGE_SIZE;
+      const skip = pageIndex === 0 ? 0 : PAGE_SIZE_FIRST + (pageIndex - 1) * PAGE_SIZE;
+      const base = getEndpoint(type, userId, searchQuery, circleId);
+      const sep = base.includes('?') ? '&' : '?';
+      return `${base}${sep}skip=${skip}&take=${take}`;
+    },
+    [type, userId, searchQuery, circleId],
+  );
 
-      if (type === 'user' && userId) {
-        endpoint = `/content/articles/user/${userId}`;
-      } else if (type === 'search' && searchQuery) {
-        endpoint = `/content/search?q=${encodeURIComponent(searchQuery)}`;
-      } else if (type === 'circle' && circleId) {
-        endpoint = `/circles/${circleId}/posts`;
+  const fetcher = useCallback(
+    async (url: string): Promise<Post[]> => {
+      const data = await request<Array<Record<string, unknown>>>(url);
+      if (!Array.isArray(data)) return [];
+      return data.map(mapApiPost);
+    },
+    [],
+  );
+
+  const { data, error, size, setSize, isValidating, mutate } = useSWRInfinite<Post[]>(getKey, fetcher, {
+    revalidateOnFocus: false,
+    revalidateFirstPage: false,
+    initialSize: 1,
+  });
+
+  // Flatten pages into single array
+  const posts = data?.flat() ?? [];
+  const isLoading = !data && !error;
+  const isLoadingMore = isValidating && data && data.length > 0;
+  const isEmpty = data?.[0]?.length === 0;
+  const isReachingEnd = data && data[data.length - 1]?.length === 0;
+
+  // IntersectionObserver: load next page when sentinel enters viewport
+  const handleObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      const [entry] = entries;
+      if (entry?.isIntersecting && !isValidating && !isReachingEnd) {
+        setSize(size + 1);
       }
+    },
+    [isValidating, isReachingEnd, setSize, size],
+  );
 
-      const data = await request<Array<Record<string, unknown>>>(endpoint);
-      if (Array.isArray(data)) {
-        setPosts(data.map(mapApiPost));
-      } else {
-        setPosts([]);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '获取内容失败';
-      setError(message);
-      setPosts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Observe sentinel for infinite scroll
   useEffect(() => {
-    fetchPosts();
-  }, [type, userId, searchQuery, circleId]);
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(handleObserver, { rootMargin: '200px' });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [handleObserver]);
 
   const handleLike = (postId: string) => {
-    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, likes: p.likes + 1 } : p)));
+    mutate((pages) =>
+      pages?.map((page) =>
+        page.map((p) => (p.id === postId ? { ...p, likes: p.likes + 1 } : p)),
+      ),
+      false,
+    );
   };
 
   const handleDelete = (postId: string) => {
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    mutate((pages) =>
+      pages?.map((page) => page.filter((p) => p.id !== postId)),
+      false,
+    );
   };
 
   const handleShare = (postId: string, newShares: number) => {
-    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, shares: newShares } : p)));
+    mutate((pages) =>
+      pages?.map((page) =>
+        page.map((p) => (p.id === postId ? { ...p, shares: newShares } : p)),
+      ),
+      false,
+    );
   };
 
-  if (loading) return <ListSkeleton count={4} />;
+  // Initial loading
+  if (isLoading) return <ListSkeleton count={4} />;
 
-  if (error) return <ErrorState message="加载失败" detail={error} onRetry={fetchPosts} />;
+  // Error state
+  if (error && !data) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-5xl mb-4">⚠️</div>
+        <p className="text-red-500 mb-4 font-medium">加载失败</p>
+        <p className="text-gray-500 text-sm mb-4">{error.message || '请检查网络连接'}</p>
+        <button
+          onClick={() => mutate()}
+          className="px-5 py-2.5 bg-[#6364FF] text-white rounded-xl text-sm font-medium hover:bg-[#5558DD] transition-colors"
+        >
+          点击重试
+        </button>
+      </div>
+    );
+  }
 
-  if (posts.length === 0) return <EmptyState />;
+  // Empty state
+  if (isEmpty) return <EmptyState />;
 
   return (
     <ErrorBoundary severity="section">
-      <motion.div className="content-grid" variants={stagger} initial="hidden" animate="visible">
+      <motion.div variants={stagger} initial="hidden" animate="visible">
         <AnimatePresence mode="popLayout">
           {posts.map((post) => (
             <motion.div
@@ -132,6 +192,31 @@ export default function ContentFeed({ type = 'recommended', userId, searchQuery,
           ))}
         </AnimatePresence>
       </motion.div>
+
+      {/* Sentinel for infinite scroll */}
+      <div ref={sentinelRef} className="h-1" />
+
+      {/* Loading more indicator */}
+      {isLoadingMore && (
+        <div className="flex justify-center py-6">
+          <div className="flex items-center gap-2 text-gray-400">
+            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <span className="text-sm">加载更多...</span>
+          </div>
+        </div>
+      )}
+
+      {/* No more content */}
+      {isReachingEnd && posts.length > 0 && (
+        <div className="text-center py-8">
+          <div className="inline-block px-4 py-2 bg-gray-50 rounded-full text-sm text-gray-400">
+            没有更多了
+          </div>
+        </div>
+      )}
     </ErrorBoundary>
   );
 }

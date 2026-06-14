@@ -125,7 +125,7 @@ export default function UserManagementPage() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
         {[
           { label: '总用户数', value: users.length, icon: '👥', gradient: 'from-blue-500 to-cyan-500' },
           { label: '活跃用户', value: users.filter(u => !u.isFrozen).length, icon: '✨', gradient: 'from-green-500 to-emerald-500' },

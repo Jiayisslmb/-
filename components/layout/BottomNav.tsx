@@ -12,10 +12,11 @@ function HomeIcon({ active }: { active: boolean }) {
   );
 }
 
-function SearchIcon({ active }: { active: boolean }) {
+function CirclesIcon({ active }: { active: boolean }) {
   return (
     <svg className={`w-6 h-6 ${active ? 'text-[#6364FF]' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 1.5 : 2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 1.5 : 2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 1.5 : 2} d="M12 8a4 4 0 100 8 4 4 0 000-8z" />
     </svg>
   );
 }
@@ -70,14 +71,14 @@ export default function BottomNav() {
         </Link>
 
         <Link
-          href="/search"
+          href="/circles"
           className={`flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-0.5 ${
-            isActive('/search') ? 'text-[#6364FF]' : 'text-gray-400'
+            isActive('/circles') ? 'text-[#6364FF]' : 'text-gray-400'
           }`}
         >
-          <SearchIcon active={isActive('/search')} />
-          <span className="text-[10px] font-medium">搜索</span>
-          {isActive('/search') && <div className="absolute -bottom-0 w-8 h-0.5 bg-[#6364FF] rounded-full" />}
+          <CirclesIcon active={isActive('/circles')} />
+          <span className="text-[10px] font-medium">圈子</span>
+          {isActive('/circles') && <div className="absolute -bottom-0 w-8 h-0.5 bg-[#6364FF] rounded-full" />}
         </Link>
 
         {/* Center create button */}

@@ -78,8 +78,6 @@ import Button from '@/components/ui/Button';
 import { memo, useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/auth';
 import ReportModal from '@/components/common/ReportModal';
-import { UserDisplayWithAvatar } from '@/components/common/UserDisplay';
-
 import type { PostDTO, Visibility, PostType } from '@/types';
 import { toast } from '@/lib/toast';
 export type { PostDTO as Post, Visibility, PostType } from '@/types';
@@ -415,263 +413,254 @@ const PostItem = memo(function PostItem({ post, onLike, onDelete, onShare }: Pos
     }
   };
 
+  const [contentExpanded, setContentExpanded] = useState(false);
+
+  const displayName = post.author.nickname || post.author.username || '未知用户';
+
   return (
-    <Card hoverable className="mb-4 p-5">
-      <div className="flex gap-4">
-          <UserDisplayWithAvatar
-            avatar={post.author.avatar}
-            nickname={post.author.nickname}
-            username={post.author.username}
-            avatarSize="md"
+    <Card hoverable className="mb-4 overflow-hidden">
+      {/* ═══ 头部：头像 + 用户名·昵称 + 圈子标签 + 发布时间 + 可见度 ═══ */}
+      <div className="flex items-center gap-3 px-5 pt-5 pb-3">
+        <LinkWithBack
+          href={`/profile/${post.author.username}`}
+          className="flex-shrink-0"
+        >
+          <Avatar
+            src={post.author.avatar}
+            alt={displayName}
             size="md"
-            layout="stack"
-            gap="sm"
-            className="flex"
           />
+        </LinkWithBack>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex items-center flex-wrap gap-1">
-                {isArticle && post.circleId && post.circleName && (
-                  <>
-                    <span className="text-gray-300">·</span>
-                    <LinkWithBack href={`/circles/${post.circleId}`} className="text-[#6364FF] hover:underline text-sm font-medium">
-                      📍 {post.circleName}
-                    </LinkWithBack>
-                  </>
-                )}
-                <span className="text-gray-400 text-sm">·</span>
-                <span className="text-gray-500 text-sm">{formatDate(post.createdAt)}</span>
-              </div>
-            <div className="flex items-center gap-2">
-              {isAuthenticated && String(user?.id) === String(post.author.id) && (
-                <div className="relative" ref={menuRef}>
-                  <button
-                    onClick={() => { setShowMenu(!showMenu); setShowVisibilityMenu(false); }}
-                    className="text-gray-400 hover:text-gray-600 px-2"
-                  >
-                    ⋯
-                  </button>
-                  {showMenu && (
-                    <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[150px] z-10">
-                      <div
-                        className="relative px-4 py-2 text-left text-sm hover:bg-gray-100 cursor-pointer"
-                        onMouseEnter={() => setShowVisibilityMenu(true)}
-                        onMouseLeave={() => setShowVisibilityMenu(false)}
-                      >
-                        <span>修改可见性 ▸</span>
-                        {showVisibilityMenu && (
-                          <div className="absolute left-full top-0 ml-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[180px] z-20">
-                            <button
-                              onClick={() => { handleChangeVisibility('public'); setShowMenu(false); setShowVisibilityMenu(false); }}
-                              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                            >
-                              🌐 公开 - 所有人可见
-                            </button>
-                            <button
-                              onClick={() => { handleChangeVisibility('followers'); setShowMenu(false); setShowVisibilityMenu(false); }}
-                              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                            >
-                              👥 仅关注者 - 仅粉丝可见
-                            </button>
-                            <button
-                              onClick={() => { handleChangeVisibility('private'); setShowMenu(false); setShowVisibilityMenu(false); }}
-                              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                            >
-                              🔒 私密 - 仅自己可见
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          const confirmed = window.confirm(`确定要删除这篇${isArticle ? '文章' : '动态'}吗？此操作不可撤销。`);
-                          if (!confirmed) return;
-                          
-                          try {
-                            const basePath = isArticle ? '/content/articles' : '/content/moments';
-                            const token = localStorage.getItem('token');
-                            
-                            const response = await fetch(`/api${basePath}/${post.id}`, {
-                              method: 'DELETE',
-                              headers: {
-                                'Authorization': `Bearer ${token}`,
-                              },
-                            });
-                            
-                            if (response.ok) {
-                              onDelete?.(post.id);
-                              setShowMenu(false);
-                              router.refresh();
-                            } else {
-                              const error = await response.json();
-                              toast.error(error.message || '删除失败');
-                            }
-                          } catch (err) {
-                            console.error('删除失败:', err);
-                            toast.error('删除失败，请重试');
-                          }
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600"
-                      >
-                        删除{isArticle ? '文章' : '动态'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-              {isAuthenticated && String(user?.id) !== String(post.author.id) && (
-                <div className="relative">
-                  <button
-                    onClick={() => setShowMenu(!showMenu)}
-                    className="text-gray-400 hover:text-gray-600 px-2"
-                  >
-                    ⋯
-                  </button>
-                  {showMenu && (
-                    <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[120px] z-10">
-                      <button
-                        onClick={() => {
-                          setShowReportModal(true);
-                          setShowMenu(false);
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600"
-                      >
-                        举报{isArticle ? '文章' : '动态'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {isArticle && post.title && (
-            <LinkWithBack href={`/content/article/${post.id}`} className="block group">
-              <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#6364FF] mb-2 transition-colors duration-200">{post.title}</h3>
-            </LinkWithBack>
-          )}
-
-          {isRepostMoment ? (
-            <div className="mb-4">
-              {hasOriginalLink && post.content.split('转发文章')[0]!.split('转发动态')[0]!.trim() && (
-                <LinkWithBack href={`/content/moment/${post.id}`} className="block group mb-3">
-                  <div className="font-bold text-lg text-gray-900 group-hover:text-[#6364FF] transition-colors duration-200">
-                    {post.content.split('转发文章')[0]!.split('转发动态')[0]!.trim()}
-                  </div>
-                </LinkWithBack>
-              )}
-              <div className="p-4 bg-white border border-gray-100 rounded-lg">
-                <div className="text-sm text-gray-500 mb-2">转发内容</div>
-                {hasOriginalLink ? (
-                  <LinkWithBack href={post.content.match(/原文链接: (.*)/)?.[1] || '#'} className="block group">
-                    <p className="text-gray-700 mb-2 line-clamp-3 group-hover:text-[#6364FF] transition-colors duration-200 leading-relaxed">
-                      {post.content.split('\n原文链接:')[0].replace('转发文章\n「', '').replace('」', '').replace('转发动态\n「', '').replace('」', '').replace(post.content.split('转发文章')[0].split('转发动态')[0], '').trim()}
-                    </p>
-                  </LinkWithBack>
-                ) : (
-                  <LinkWithBack href={`/content/${isArticle ? 'article' : 'moment'}/${post.id}`} className="block group">
-                    <p className="text-gray-700 mb-2 line-clamp-3 group-hover:text-[#6364FF] transition-colors duration-200 leading-relaxed">
-                      {post.content.replace('转发文章\n「', '').replace('」', '').replace('转发动态\n「', '').replace('」', '').trim()}
-                    </p>
-                  </LinkWithBack>
-                )}
-              </div>
-            </div>
-          ) : (
-            <LinkWithBack href={`/content/${isArticle ? 'article' : 'moment'}/${post.id}`} className="block group">
-              <p className="text-gray-700 mb-2 line-clamp-3 group-hover:text-[#6364FF] transition-colors duration-200 leading-relaxed">{post.content}</p>
-            </LinkWithBack>
-          )}
-
-          {(post.mediaUrl || post.mediaCid) && (
-            <div className="mb-3 flex justify-center">
-              <div className="rounded-xl overflow-hidden max-w-full shadow-sm hover:shadow-md transition-shadow duration-300">
-                <img
-                  src={post.mediaUrl || post.mediaCid}
-                  alt="media"
-                  className="max-h-96 object-contain mx-auto"
-                />
-              </div>
-            </div>
-          )}
-
-          {post.tags && Array.isArray(post.tags) && post.tags.length > 0 && (
-            <div className="mb-3 flex gap-2 flex-wrap">
-              {post.tags.map((tag: string | number) => (
-                <Link
-                  key={tag}
-                  href={`/topic/${encodeURIComponent(String(tag))}`}
-                  className="text-[#6364FF] hover:bg-[#F0EFFF] px-2.5 py-1 rounded-full text-sm font-medium transition-all duration-200"
-                >
-                  #{tag}
-                </Link>
-              ))}
-            </div>
-          )}
-
-          <div className="flex gap-1 mt-4 pt-4 border-t border-gray-100 text-gray-500">
-            <button
-              onClick={handleLike}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${isLiked ? 'text-red-500 bg-red-50' : 'hover:text-red-500 hover:bg-red-50'}`}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <LinkWithBack
+              href={`/profile/${post.author.username}`}
+              className="font-semibold text-gray-900 hover:text-[#6364FF] transition-colors text-sm truncate max-w-[160px]"
             >
-              <svg className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} fill={isLiked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-              <span className="text-sm font-medium">{formatNumber(likes)}</span>
-            </button>
-            <LinkWithBack href={`/content/${isArticle ? 'article' : 'moment'}/${post.id}`} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:text-[#6364FF] hover:bg-[#F0EFFF] transition-all duration-200">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              <span className="text-sm font-medium">{formatNumber(post.comments)}</span>
+              {displayName}
             </LinkWithBack>
-            {!isRepostMoment && (
-              <div className="relative" ref={shareRef}>
-                <button 
-                  onClick={handleShare}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:text-green-600 hover:bg-green-50 transition-all duration-200"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                  </svg>
-                  <span className="text-sm font-medium">{formatNumber(shares)}</span>
-                </button>
-                {showShareOptions && (
-                  <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[180px] z-10">
-                    <button
-                      onClick={handleShareToMoment}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                      </svg>
-                      <span>转发到动态</span>
-                    </button>
-                    <button
-                      onClick={handleShareToFriend}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
-                      <span>转发给好友</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+            {post.author.nickname && post.author.nickname !== post.author.username && (
+              <span className="text-gray-400 text-xs truncate max-w-[100px]">@{post.author.username}</span>
             )}
-            <button 
-              onClick={handleCollect}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${isCollected ? 'text-yellow-500 bg-yellow-50' : 'hover:text-yellow-600 hover:bg-yellow-50'}`}
-            >
-              <svg className={`w-5 h-5 ${isCollected ? 'fill-current' : ''}`} fill={isCollected ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-            </button>
+            {isArticle && post.circleId && post.circleName && (
+              <LinkWithBack
+                href={`/circles/${post.circleId}`}
+                className="text-[#6364FF] text-xs font-medium bg-[#F0EFFF] px-2 py-0.5 rounded-full hover:bg-[#E0DEFF] transition-colors"
+              >
+                {post.circleName}
+              </LinkWithBack>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-gray-400 text-xs">{formatDate(post.createdAt)}</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+              post.visibility === 'public'
+                ? 'bg-green-50 text-green-600'
+                : post.visibility === 'followers'
+                  ? 'bg-yellow-50 text-yellow-600'
+                  : 'bg-red-50 text-red-600'
+            }`}>
+              {post.visibility === 'public' ? '公开' : post.visibility === 'followers' ? '关注者' : '私密'}
+            </span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+              isArticle ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'
+            }`}>
+              {isArticle ? '文章' : '动态'}
+            </span>
           </div>
         </div>
+
+        {/* 更多操作菜单 */}
+        <div className="relative flex-shrink-0" ref={menuRef}>
+          <button
+            onClick={() => { setShowMenu(!showMenu); setShowVisibilityMenu(false); }}
+            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01" />
+            </svg>
+          </button>
+          {showMenu && (
+            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[150px] z-10 animate-scaleIn origin-top-right">
+              {isAuthenticated && String(user?.id) === String(post.author.id) ? (
+                <>
+                  <div
+                    className="relative px-4 py-2 text-left text-sm hover:bg-gray-50 cursor-pointer flex items-center justify-between"
+                    onMouseEnter={() => setShowVisibilityMenu(true)}
+                    onMouseLeave={() => setShowVisibilityMenu(false)}
+                  >
+                    <span>修改可见性</span>
+                    <span className="text-gray-400">▸</span>
+                    {showVisibilityMenu && (
+                      <div className="absolute left-full top-0 ml-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[180px] z-20">
+                        <button onClick={() => { handleChangeVisibility('public'); setShowMenu(false); setShowVisibilityMenu(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">🌐 公开</button>
+                        <button onClick={() => { handleChangeVisibility('followers'); setShowMenu(false); setShowVisibilityMenu(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">👥 仅关注者</button>
+                        <button onClick={() => { handleChangeVisibility('private'); setShowMenu(false); setShowVisibilityMenu(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">🔒 私密</button>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!window.confirm(`确定要删除这篇${isArticle ? '文章' : '动态'}吗？`)) return;
+                      try {
+                        const basePath = isArticle ? '/content/articles' : '/content/moments';
+                        const response = await fetch(`/api${basePath}/${post.id}`, {
+                          method: 'DELETE',
+                          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                        });
+                        if (response.ok) { onDelete?.(post.id); setShowMenu(false); router.refresh(); }
+                        else { const error = await response.json(); toast.error(error.message || '删除失败'); }
+                      } catch { toast.error('删除失败，请重试'); }
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600"
+                  >
+                    删除
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => { setShowReportModal(true); setShowMenu(false); }}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600"
+                >
+                  举报
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ═══ 中部：标题 + 正文 + 媒体 + 标签 ═══ */}
+      <div className="px-5 pb-3">
+        {/* 标题 (18px bold) */}
+        {isArticle && post.title && (
+          <LinkWithBack href={`/content/article/${post.id}`} className="block group mb-2">
+            <h3 className="text-[18px] font-bold text-gray-900 group-hover:text-[#6364FF] transition-colors leading-snug">
+              {post.title}
+            </h3>
+          </LinkWithBack>
+        )}
+
+        {/* 正文 (14px, 三行截断 + 展开) */}
+        {isRepostMoment ? (
+          <div className="mb-3 p-3 bg-gray-50 border border-gray-100 rounded-xl">
+            <div className="text-xs text-gray-400 mb-1.5">转发内容</div>
+            <LinkWithBack
+              href={hasOriginalLink ? (post.content.match(/原文链接: (.*)/)?.[1] || '#') : `/content/${isArticle ? 'article' : 'moment'}/${post.id}`}
+              className="block"
+            >
+              <p className="text-sm text-gray-700 line-clamp-3 leading-relaxed">
+                {post.content.replace(/转发(文章|动态)\n「/, '').replace(/」/g, '').replace(/\n原文链接:.*/, '').trim()}
+              </p>
+            </LinkWithBack>
+          </div>
+        ) : (
+          <LinkWithBack href={`/content/${isArticle ? 'article' : 'moment'}/${post.id}`} className="block group mb-2">
+            <p className={`text-sm text-gray-700 leading-relaxed group-hover:text-gray-900 transition-colors ${contentExpanded ? '' : 'line-clamp-3'}`}>
+              {post.content}
+            </p>
+            {post.content && post.content.length > 200 && (
+              <button
+                onClick={(e) => { e.preventDefault(); setContentExpanded(!contentExpanded); }}
+                className="text-[#6364FF] text-xs font-medium mt-1 hover:underline"
+              >
+                {contentExpanded ? '收起' : '展开全文'}
+              </button>
+            )}
+          </LinkWithBack>
+        )}
+
+        {/* 媒体 (16:9 自适应) */}
+        {(post.mediaUrl || post.mediaCid) && (
+          <div className="mb-3 rounded-xl overflow-hidden bg-gray-100">
+            <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={post.mediaUrl || post.mediaCid || ''}
+                alt="media"
+                className="absolute inset-0 w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* 标签 */}
+        {post.tags && Array.isArray(post.tags) && post.tags.length > 0 && (
+          <div className="flex gap-1.5 flex-wrap mt-2">
+            {post.tags.map((tag: string | number) => (
+              <Link
+                key={tag}
+                href={`/topic/${encodeURIComponent(String(tag))}`}
+                className="text-[#6364FF] hover:bg-[#F0EFFF] px-2 py-0.5 rounded-full text-xs font-medium transition-colors"
+              >
+                #{tag}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ═══ 底部：交互按钮等宽分布 ═══ */}
+      <div className="flex items-center justify-around px-2 py-2.5 border-t border-gray-50 text-gray-500">
+        <button
+          onClick={handleLike}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
+            isLiked ? 'text-red-500 bg-red-50' : 'hover:text-red-500 hover:bg-red-50'
+          }`}
+        >
+          <svg className={`w-4.5 h-4.5 ${isLiked ? 'fill-current' : ''}`} fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
+          <span>{formatNumber(likes)}</span>
+        </button>
+
+        <LinkWithBack
+          href={`/content/${isArticle ? 'article' : 'moment'}/${post.id}`}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:text-[#6364FF] hover:bg-[#F0EFFF] transition-all duration-200 text-sm font-medium"
+        >
+          <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          <span>{formatNumber(post.comments)}</span>
+        </LinkWithBack>
+
+        {!isRepostMoment && (
+          <div className="relative" ref={shareRef}>
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:text-green-600 hover:bg-green-50 transition-all duration-200 text-sm font-medium"
+            >
+              <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              <span>{formatNumber(shares)}</span>
+            </button>
+            {showShareOptions && (
+              <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px] z-10 animate-scaleIn origin-bottom-left">
+                <button onClick={handleShareToMoment} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 flex items-center gap-2">
+                  <span>📝</span> 转发到动态
+                </button>
+                <button onClick={handleShareToFriend} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 flex items-center gap-2">
+                  <span>👥</span> 复制链接给好友
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <button
+          onClick={handleCollect}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
+            isCollected ? 'text-yellow-500 bg-yellow-50' : 'hover:text-yellow-600 hover:bg-yellow-50'
+          }`}
+        >
+          <svg className={`w-4.5 h-4.5 ${isCollected ? 'fill-current' : ''}`} fill={isCollected ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+          </svg>
+        </button>
       </div>
 
       <ReportModal

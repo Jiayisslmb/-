@@ -107,7 +107,7 @@ export default function CirclesManagementPage() {
         <p className="text-white/80 text-lg">管理平台上的圈子，处理违规内容</p>
       </div>
 
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
         {[
           { label: '圈子总数', value: circles.length, icon: '🌐', gradient: 'from-blue-500 to-cyan-500' },
           { label: '总成员数', value: circles.reduce((sum, c) => sum + c.memberCount, 0), icon: '👥', gradient: 'from-green-500 to-emerald-500' },

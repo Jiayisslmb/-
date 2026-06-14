@@ -160,7 +160,7 @@ export default function ContentManagementPage() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
         {[
           { label: '总内容数', value: contents.length, icon: '📊', gradient: 'from-blue-500 to-cyan-500' },
           { label: '已发布', value: contents.filter(c => !c.isDeleted).length, icon: '✅', gradient: 'from-green-500 to-emerald-500' },
