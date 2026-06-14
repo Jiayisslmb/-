@@ -80,6 +80,7 @@ import { useAuth } from '@/lib/auth';
 import ReportModal from '@/components/common/ReportModal';
 import type { PostDTO, Visibility, PostType } from '@/types';
 import { toast } from '@/lib/toast';
+import { getIPFSUrl } from '@/lib/ipfs';
 export type { PostDTO as Post, Visibility, PostType } from '@/types';
 
 function stripMarkdown(text: string): string {
