@@ -59,6 +59,9 @@ export async function sendMessage(
       try {
         const parsed = JSON.parse(data);
         if (parsed.error) throw new Error(parsed.error);
+        if (parsed.conversationId) {
+          onChunk(JSON.stringify({ conversationId: parsed.conversationId }));
+        }
         if (parsed.content) {
           fullContent += parsed.content;
           onChunk(parsed.content);
