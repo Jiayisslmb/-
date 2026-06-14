@@ -99,9 +99,9 @@ export default function SettingsLayout({ children, title }: SettingsLayoutProps)
   };
 
   return (
-    <div className="flex flex-col md:flex-row bg-white">
-      {/* 桌面端左侧导航菜单 — sticky 固定高度，内部溢出可滚 */}
-      <div className="hidden md:flex flex-col w-56 lg:w-64 border-r border-gray-200 shrink-0 sticky top-24 h-[calc(100vh-6rem)]">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-4rem)] overflow-hidden bg-white">
+      {/* 桌面端左侧导航菜单 — 容器固定高度，导航内部滚动，退出按钮始终在底部 */}
+      <div className="hidden md:flex flex-col w-56 lg:w-64 border-r border-gray-200 shrink-0">
         <nav className="space-y-1 flex-1 overflow-y-auto p-6 pb-2">
           {settingsMenu.map((item) => (
             <Link
@@ -154,8 +154,8 @@ export default function SettingsLayout({ children, title }: SettingsLayoutProps)
         </div>
       </div>
 
-      {/* 右侧内容区域 */}
-      <div className="flex-1 p-4 md:p-8 min-w-0">
+      {/* 右侧内容区域 — 内部滚动 */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 min-w-0">
         <div className="max-w-3xl">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight mb-2">{title}</h1>
           <div className="mb-6 h-1 w-16 bg-gradient-to-r from-[#6364FF] to-[#8B83FF] rounded-full"></div>
