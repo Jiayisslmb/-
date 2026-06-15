@@ -25,6 +25,9 @@ interface IPFSContextType {
 
 const IPFSContext = createContext<IPFSContextType | undefined>(undefined);
 
+/** Vercel Edge 代理请求体上限约 4.5MB，大文件直连 api.desocial.top 绕过限制 */
+const VERCEL_BODY_LIMIT = 4 * 1024 * 1024; // 4MB 安全阈值
+
 const uploadToBackend = async (file: File): Promise<{ cid: string; url: string }> => {
   const token = localStorage.getItem('token');
   if (!token) {
@@ -34,7 +37,12 @@ const uploadToBackend = async (file: File): Promise<{ cid: string; url: string }
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch('/api/ipfs/upload', {
+  // 大文件直连 api.desocial.top，绕过 Vercel proxy 的 4.5MB body 限制
+  const apiBase = file.size > VERCEL_BODY_LIMIT
+    ? 'https://api.desocial.top/api'
+    : '/api';
+
+  const response = await fetch(`${apiBase}/ipfs/upload`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -54,21 +62,22 @@ const uploadToBackend = async (file: File): Promise<{ cid: string; url: string }
   };
 };
 
+/**
+ * @deprecated 本地存储仅作兜底展示历史已存的 local_ CID 之用，
+ *             新上传不再使用此函数——上传失败应直接报错，不静默降级。
+ */
 const uploadToLocal = async (file: File): Promise<{ cid: string; url: string }> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       try {
         const base64 = reader.result as string;
-        
-        // 尝试存储到 localStorage
         try {
           const hash = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           localStorage.setItem(`ipfs:${hash}`, base64);
           resolve({ cid: hash, url: base64 });
         } catch (storageError) {
           console.warn('localStorage 配额超限，直接返回 base64 数据');
-          // 配额超限时，直接返回 base64 数据作为 cid
           resolve({ cid: base64, url: base64 });
         }
       } catch (error) {
@@ -122,12 +131,7 @@ export function IPFSProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const upload = async (file: File) => {
-    try {
-      return await uploadToBackend(file);
-    } catch (error) {
-      console.warn('后端上传失败，使用本地存储:', error);
-      return uploadToLocal(file);
-    }
+    return await uploadToBackend(file);
   };
 
   const fetchFromIPFSGateway = async (cid: string) => {
@@ -156,22 +160,10 @@ export function useIPFS() {
 }
 
 export const uploadToIPFS = async (file: File): Promise<{ cid: string; url: string }> => {
-  try {
-    console.log('尝试上传到后端IPFS服务:', file.name);
-    const result = await uploadToBackend(file);
-    console.log('后端上传成功:', result);
-    return result;
-  } catch (error: any) {
-    console.warn('后端上传失败，使用本地存储:', error.message);
-    try {
-      const localResult = await uploadToLocal(file);
-      console.log('本地存储成功:', localResult);
-      return localResult;
-    } catch (localError) {
-      console.error('本地存储也失败:', localError);
-      throw new Error('上传失败: 后端服务和本地存储都无法使用');
-    }
-  }
+  console.log('上传文件到IPFS:', file.name, `(${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+  const result = await uploadToBackend(file);
+  console.log('上传成功，CID:', result.cid);
+  return result;
 };
 
 export const fetchFromIPFSExport = async (cid: string): Promise<Blob | null> => {
