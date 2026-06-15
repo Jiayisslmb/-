@@ -2,6 +2,23 @@
 
 import { io, Socket } from 'socket.io-client';
 
+/** 收集浏览器真实设备信息，用于服务端设备识别 */
+function getDeviceInfo() {
+  if (typeof window === 'undefined') return {};
+  try {
+    return {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      language: navigator.language,
+      screenWidth: screen.width,
+      screenHeight: screen.height,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+  } catch {
+    return {};
+  }
+}
+
 export interface ChatMessage {
   id: number;
   content: string;
@@ -140,7 +157,7 @@ class ChatClient {
 
       try {
         this.socket = io(socketUrl, {
-          auth: { token: activeToken },
+          auth: { token: activeToken, deviceInfo: getDeviceInfo() },
           path: '/api/socket.io',
           transports: ['websocket', 'polling'],
           reconnection: true,
