@@ -13,6 +13,8 @@ function getDeviceInfo() {
       screenWidth: screen.width,
       screenHeight: screen.height,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      // @ts-ignore navigator.userAgentData 仅在安全上下文(HTTPS)可用
+      platformVersion: navigator.userAgentData?.platformVersion || '',
     };
   } catch {
     return {};
