@@ -2,19 +2,41 @@
 
 import { io, Socket } from 'socket.io-client';
 
+/** 生成或获取持久化设备 UUID（存入 localStorage，跨会话不变） */
+function getDeviceUUID(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const key = '__ds_device_uuid';
+    let uuid = localStorage.getItem(key);
+    if (!uuid) {
+      uuid = crypto.randomUUID();
+      localStorage.setItem(key, uuid);
+    }
+    return uuid;
+  } catch {
+    return '';
+  }
+}
+
 /** 收集浏览器真实设备信息，用于服务端设备识别 */
 function getDeviceInfo() {
   if (typeof window === 'undefined') return {};
   try {
+    const nav = navigator as any;
     return {
       userAgent: navigator.userAgent,
       platform: navigator.platform,
       language: navigator.language,
       screenWidth: screen.width,
       screenHeight: screen.height,
+      colorDepth: screen.colorDepth,
+      hardwareConcurrency: nav.hardwareConcurrency || 0,
+      deviceMemory: nav.deviceMemory || 0,
+      maxTouchPoints: nav.maxTouchPoints || 0,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       // @ts-ignore navigator.userAgentData 仅在安全上下文(HTTPS)可用
       platformVersion: navigator.userAgentData?.platformVersion || '',
+      deviceUUID: getDeviceUUID(),
     };
   } catch {
     return {};
